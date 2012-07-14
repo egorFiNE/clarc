@@ -1,5 +1,5 @@
 deps/
-libsqlite.a
+libsqlite3.a
 *.o
 clarc
 help.c
