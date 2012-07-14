@@ -1,4 +1,4 @@
 deps/
 *.o
-s3t
+clarc
 help.c
