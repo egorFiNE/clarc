@@ -1,0 +1,4 @@
+deps/
+*.o
+s3t
+help.c

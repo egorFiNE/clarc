@@ -1,0 +1,97 @@
+.TH CLARC "1" "" "clarc" "User Commands"
+.SH NAME
+clarc \- sync local files to Amazon S3 cloud storage
+.SH SYNOPSIS
+.B clarc
+[\fIMODE\fR] [\fIOPTION\fR]... 
+.SH DESCRIPTION
+.B clarc
+copies all local files from a filesystem folder to a given Amazon S3 bucket. Only files that were changed/added since last 
+.B clarc
+invocation are uploaded. 
+
+Metadata and files list are stored in a small local database file in the same folder. This way 
+.B clarc
+can quickly determine what's changed without redownloading the whole list of files from Amazon. 
+It is also possible to rebuild the metadata database from Amazon S3.
+.SH MODE
+The first option for 
+.B clarc
+must be one or both of the following. If you specify both, then 
+.B rebuild 
+is done first. This is the most failsafe mode of operation. 
+.PP
+.TP
+\fB\-\-upload\fR
+Actually upload files to Amazon S3.
+.TP
+\fB\-\-rebuild\fR
+Download files list and meta information from Amazon S3 and rebuild local database from scratch.
+.SH MAIN OPTIONS
+.PP
+.TP
+\fB\-\-source <path> 
+.B (*)
+Absolute path to folder that is being uploaded. 
+.SH AMAZON S3 OPTIONS
+.PP
+.TP
+\fB\-\-accessKeyId <string>
+.B (*) 
+Amazon S3 Access Key ID
+.TP
+\fB\-\-secretAccessKeyId <string> 
+.B (*) 
+Amazon S3 Secret Access Key
+.TP
+\fB\-\-bucket <string> 
+.B (*) 
+Amazon S3 bucket to upload to
+.TP
+\fB\-\-endPoint <string> 
+Amazon S3 endpoint (default: 's3.amazonaws.com', which is suitable for any bucket in any region already existing on S3).
+.TP
+\fB\-\-rrs
+Use Reduced Redundancy Storage for Amazon S3, which is recommended for backups. RRS is cheaper and lost files will be restored anyway with a 
+.B --rebuild.
+By default the Standard storage is used. 
+.TP
+\fB\-\-public
+Make all files publically avaialble on S3. By default all files are only accessible by the Amazon S3 account owner.
+.SH METADATA STORAGE OPTIONS
+.PP
+.TP
+\fB\-\-databasePath <path>
+Absolute path to local database file instead
+of the default path. by default it's stored 
+in the 
+.B --source 
+folder. 
+.B WARNING: 
+This option must not specify file name. 
+.TP
+\fB\-\-databaseFilename <filename>
+File name for the database. Default: '.files.sqlite3'.
+.SH MISC OPTIONS
+.PP
+.TP
+\fB\-\-version
+.TP
+\fB\-\-help
+.SH EXAMPLES
+See documentation for examples; this is a single one.
+
+  clarc --rebuild  --upload
+        --accessKeyId UKIOIZZADUGFFDD7SFVF 
+        --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  
+        --source /home/egor/Music/  
+        --bucket music.egorfine.com  
+.SH AUTHOR
+Copyright \(co 2012 Egor Egorov <me@egorfine.com>
+.SH REPORTING BUGS
+Report bugs to <me@egorfine.com> or at http://github.com/FIXME
+.SH LICENSE
+.PP
+License FIXME
+.br
+This is FIXME
