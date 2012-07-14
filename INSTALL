@@ -1,0 +1,43 @@
+Build on Linux
+==============
+
+clarc is using Grand Central Dispatch and C Blocks to use all available CPU cores, 
+network bandwidth and disk speed. In order to build clarc on Linux you will need 
+the clang C/C++ compiler and the following libraries installed:
+
+ * libdispatch
+ * libcurl with SSL support
+ * libxml2
+
+On a modern Linux distribution this is all available out of the box. 
+For instance, on Ubuntu 12 do:
+
+      sudo apt-get install libblocksruntime-dev libdispatch clang
+
+Then simply make.
+
+
+Build on OS X
+=============
+
+OS X has GCD and clang available by default, but you must have Xcode (or Xcode 
+command-line tools) installed.
+
+First, you have to download the latest SQLite source code (pick the second link, 
+the tar.gz). Unpack it, then run:
+
+      ./configure --enable-threadsafe
+      make
+
+After it's done, copy .libs/sqlite.a into clarc/ source code folder.
+
+Then simply make.
+
+
+Manpage
+=======
+
+      sudo cp src/clarc.1 /usr/local/man/man1/
+
+(or whatever).
+
