@@ -15,7 +15,7 @@ endif
 ifeq ($(UNAME), Darwin)
 CFLAGS=$(CFLAGS_BASIC) -D_DARWIN_FEATURE_64_BIT_INODE 
 CXXFLAGS=$(CXXFLAGS_BASIC) -D_DARWIN_FEATURE_64_BIT_INODE 
-LDFLAGS=$(LDFLAGS_BASIC) -lz -lssl -lcrypto ../deps/sqlite-autoconf-3071300/.libs/libsqlite3.a
+LDFLAGS=$(LDFLAGS_BASIC) -lz -lssl -lcrypto ../libsqlite3.a
 endif
 
 OBJS=localFileList.o fileListStorage.o upload.o base64.o help.o utils.o curlResponse.o amazonCredentials.o main.o remoteListOfFiles.o amzHeaders.o sha1.o hmac-sha1.o memxor.o
