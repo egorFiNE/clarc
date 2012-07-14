@@ -26,7 +26,7 @@ all: clarc
 clean:
 	rm -f ../clarc help.c *.o
 
-help.c: ../help.txt help.h
+help.c: help.txt help.h
 	sh makeHelpC.sh
 	$(CC) -c help.c 
 
