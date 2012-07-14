@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]> <html class="no-js lt-ie9 lt-ie8 lt-ie7 ie" lang="en"> <![endif]-->
+<!--[if IE 7]>    <html class="no-js lt-ie9 lt-ie8 ie" lang="en"> <![endif]-->
+<!--[if IE 8]>    <html class="no-js lt-ie9 ie" lang="en"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en"> <!--<![endif]-->
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title>CLARC: sync local files to Amazon S3 cloud storage</title>
+	<link href="style.css" rel="stylesheet" media="all">
+	<script src="http://cdnjs.cloudflare.com/ajax/libs/modernizr/2.0.6/modernizr.min.js"></script>
+</head>
+<body>
+<a href="https://github.com/egorFiNE/clarc"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_green_007200.png" alt="Fork me on GitHub"></a>
+
+<div id="page" class="hentry">
+	<header class="the-header">
+		<div class="unit-head">
+			<div class="unit-inner unit-head-inner">
+				<nav class="nav-global">
+					<ul>
+						<li class="logo"><a href="/clarc">CLARC: sync local files to Amazon S3 cloud storage</a></li>
+						<li><a href="#quickstart">quickstart</a></li>
+						<li><a href="#manual">manual</a></li>
+						<li><a href="#downloads">downloads</a></li>
+						<li><a href="#faq">faq</a></li>
+						<li><a href="#build">build</a></li>
+						<li><a href="#todo">todo</a></li>
+					</ul>
+				</nav>
+			</div><!-- unit-inner -->
+		</div><!-- unit-head -->
+	</header>
+	<div class="body" role="main">
+		<div class="unit-body">
+			<div class="unit-inner unit-body-inner">
+				<div class="entry-content">
+					
+<article class="unit-article layout-page">
+	<div class="unit-inner unit-article-inner">
+		<div class="content">
+
+			<div class="bd">
+				<div class="entry-content">
+
+<div>
+	<div style="float: right; border: solid red 1px; width: 250px; padding: 0 0 0 10px; height: 100%">
+		FIXME
+	</div>
+
+	<div style="float: left; width: 70%; min-width: 300px; max-width: 600px;"> 
+		<p>
+			<b>clarc</b> is a *nix commandline utility that synchronizes local file system folder to Amazon S3.
+			Only files that were changed/added since last <b>clarc</b> invocation are uploaded.
+		</p>
+
+
+		<p>
+			<b>clarc</b> keeps track of changes by storing file metadata in a small local database. 
+			It possible to quickly rebuild the database from Amazon S3.
+		</p>
+	</div>
+	<div style="clear: both"></div>
+</div>
+
+<h2 id="quickstart">
+	Quick start
+	<div style="float: right; width: 200px;"><a class="download" href="#downloads">Downloads &darr;</a></div>
+</h2>
+
+<pre><code>clarc --upload <span class="codeBackslash">\</span>
+      --accessKeyId UKIOIZZADUGFFDD7SFVF  <span class="codeBackslash">\</span>
+      --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  <span class="codeBackslash">\</span>
+      --source <span class="paramSource">/home/egor/Music/</span> <span class="codeBackslash">\</span>
+      --bucket <span class="paramDest">music.egorfine.com</span></code></pre>
+
+<p>
+	This will upload all local files from <span class="paramSource">/home/egor/Music</span> to Amazon S3 bucket <span class="paramDest">music.egorfine.com</span>. <b>clarc</b> will create a database file <span style="white-space: nowrap"><span class="paramSource">/home/egor/Music</span>/.files.sqlite3</span>. 
+</p>
+
+<p>Subsequent invocations of the same command line will scan <span class="paramSource">/home/egor/Music</span> and compare the file system metadata with the one stored in database. Only changes will be uploaded to S3.
+</p>
+
+<h2 id="downloads">Downloads</h2>
+
+<p>
+	<a href="https://github.com/egorFiNE/clarc">Source code</a> is available at Github. 
+</p>
+
+<p>
+	I'd suggest you don't bother with all Linux/OS X depencies and use the <a href="https://github.com/egorFiNE/clarc/downloads">binaries I provide</a>. Don't forget to <code>chmod +x</code> them.
+</p>
+
+<h2 id="manual">Manual</h2>
+
+<h3>Local meta database</h3>
+
+<p>
+	<b>clarc</b> uses local sqlite database to store files metadata. On subsequent invocations with the same path <b>clarc</b> will compare actual filesystem state with the database previously stored and only upload changed files. Database is stored in the same source folder in file named <code>.files.sqlite3</code>.
+</p>
+
+
+<p>However this database is by no mean vital. It can be quickly rebuilt from scratch with <code>--rebuild</code> command, like this:</p>
+
+<pre><code>clarc --rebuild <span class="codeBackslash">\</span>
+      --accessKeyId UKIOIZZADUGFFDD7SFVF  <span class="codeBackslash">\</span>
+      --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  <span class="codeBackslash">\</span>
+      --source <span class="paramSource">/home/egor/Music/</span> <span class="codeBackslash">\</span>
+      --bucket <span class="paramDest">music.egorfine.com</span></code></pre>
+
+
+<p>
+	<code>--upload</code> command instructs <b>clarc</b> to actually upload local folder to S3. You can combine both options. In this case the rebuild is done first, then files are uploaded: 
+</p>
+
+<pre><code>clarc --rebuild --upload <span class="codeBackslash">\</span>
+      --accessKeyId UKIOIZZADUGFFDD7SFVF  <span class="codeBackslash">\</span>
+      --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  <span class="codeBackslash">\</span>
+      --source <span class="paramSource">/home/egor/Music/</span> <span class="codeBackslash">\</span>
+      --bucket <span class="paramDest">music.egorfine.com</span></code></pre>
+
+<h3>Retransmit algorythm and consistency issues</h3>
+
+<p>
+	<b>clarc</b> does it's best to upload the file even in case the upload fails. In case of recoverable HTTP/Network error <b>clarc</b> will retry up to <b>3</b> to retransmit a file increasingly sleeping between tries. <b>clarc</b> gives up only in case all three attempts fail. The connect timeout is <b>15 seconds</b>, transmission timeout is <b>10 seconds</b> and <b>clarc</b> uses up to <b>50 threads</b> to read/upload files.
+</p>
+
+<p>
+	The file is updated in local meta database <b>only</b> after it is successfully uploaded and Amazon S3 returned MD5 checksum (which is also stored, of course).
+</p>
+
+<h3>Command-line options</h3>
+
+<dt>
+	<dt>--accessKeyId, --secretAccessKey <span class="mandatory">*</span></dt>
+	<dd>Amazon S3 Access Credentials. Get them <a href="https://portal.aws.amazon.com/gp/aws/securityCredentials">here</a>. 
+	<dt>--bucket <span class="mandatory">*</span></dt>
+	<dd>Name of the Amazon S3 bucket to store your files. Must exists. (Yes, I will later implement creation on demand.)</dd>
+	<dt>--endPoint <span class="mandatory">*</span></dt>
+	<dd>Amazon S3 Endpoint. Specify rubbish to get the list of available endpoints 
+		or simply use the default one, which is suitable for all regions.</dd>
+	<dt>--rrs</dt>
+	<dd>Use <a href="http://aws.amazon.com/s3/faqs/#What_is_RRS">Reduced Redundancy Storage</a> instead of the Standard Storage.</dd>
+	<dt>--public</dt>
+	<dd>Make all uploaded files publicly accessible on Amazon S3. By default all files are private.</dd>
+	<dt>--databasePath</dt>
+	<dd>Absolute path to local database file instead of the default path. 
+		By default it's the source folder. <b>Note:</b> this argument MUST NOT specify file name.</dd>
+	<dt>--databaseFilename</dt>
+	<dd>File name for the database. By default it's <code>.files.sqlite3</code>.
+	<dt>--version, --help</dt>
+	<dd>Says something.</dd>
+</dl>
+
+<p>
+<span class="mandatory">*</span> means the option is mandatory.
+</p>
+
+<h2 id="faq">FAQ</h2>
+
+<dl>
+	<dt>Access Key ID? Secret access key? What are those?</dt>
+	<dd>It's the way Amazon S3 authenticates it's users. Go <a href="https://portal.aws.amazon.com/gp/aws/securityCredentials">Security Credentials</a> page, scroll down to Access Credentials and find your keys here: <br/><br/>
+		<img src="amazonCredentials.png" alt="Amazon Credentials page" style="margin-left: 0; margin-bottom: 0"/><br/>
+		Oh yes and you have to have an account with Amazon AWS, did I forgot to tell?
+	</dd>
+
+	<dt>Okay, I understand this tool uploads files, but what about downloads?</dt>
+	<dd>
+		Downloads are yet to be implemented but please note: a) <b>clarc</b> stores files on Amazon S3 as-is. 
+		You can download them with any currently available downloader. b) <b>clarc</b> stores all file metadata, 
+		so in the future it will be able to download files and restore their state (uid, gid, permissions, etc).
+	</dd>
+
+	<dt>How secure are my files?</dt>
+	<dd>As secure as Amazon S3 storage is. Client-side encryption is planned.</dd>
+
+	<dt>What if I loose the database file?</dt>
+	<dd>No worries: use <code>--rebuild</code> command to recover.</dd>
+
+	<dt>Which files are not uploaded?</dt>
+	<dd>
+		<ul style="margin-bottom: 0">
+			<li>Files over 5Gb (due to Amazon limitations);</li>
+			<li>Symlinks (although feature planned);</li>
+			<li>Device files;</li>
+			<li>Empty directories;</li>
+		</ul>
+	</dd>
+
+	<dt>I have downloaded a binary build it says Permission denied</dt>
+	<dd><code>chmod +x</code> it.</dd>
+
+	<dt>I cannot build it on a 32bit architecture</dt>
+	<dd>I tried, too and it failed somewhere in libcurl headers. I don't think it is entirely impossible but I have close to zero interest in trying. If you manage to make a 32bit build on a 64bit arch host - please let me know how, I will for sure add your knowledge to my build instructions.</dd>
+
+	<dt>C++ sucks</dt>
+	<dd>In fact the tool is written in C. I only use C++ <code>class</code> as a syntax sugar. Yes it could all be done in plain C but this would be ugly.</dd>
+
+	<dt>What license is clarc available under?</dt>
+	<dd>FIXME</dd>
+
+	<dt>What does "clarc" stands for?</dt>
+	<dd><b>CL</b>oud <b>ARC</b>hiver. Or <b>C</b>ommand-<b>L</b>ine <b>ARC</b>hiver. Or both.</dd>
+
+<!--
+	<dt>qestion</dt>
+	<dd>ansah</dd>
+-->
+</dl>
+
+<h2 id="build">Build</h2>
+
+<h3>Build on Linux</h3>
+
+<p>
+	<b>clarc</b> is using <a href="http://en.wikipedia.org/wiki/Grand_Central_Dispatch">Grand Central Dispatch</a> and <a href="http://en.wikipedia.org/wiki/Blocks_(C_language_extension)">C Blocks</a> to use all available CPU cores, network bandwidth and disk speed. In order to build <b>clarc</b> on Linux you will need the <a href="http://clang.llvm.org/">clang</a> C/C++ compiler and the following libraries installed: 
+		<ul>
+			<li>libdispatch</li>
+			<li>libcurl with SSL support</li>
+			<li>libxml2</li>
+		</ul>
+	</p>
+
+	<p>
+		On a modern Linux distribution this is all available out of the box. For instance, on Ubuntu 12 do:
+		<pre><code>sudo apt-get install libblocksruntime-dev libdispatch clang</code></pre>
+	</p>
+
+	<p>
+		Then simply <code>make</code>. 
+	</p>
+
+<h3>Build on OS X</h3>
+
+<p>OS X has GCD and clang available by default, but you must have Xcode (or Xcode command-line tools) installed. </p>
+
+<p>First, you have to download the <a href="http://www.sqlite.org/download.html">latest SQLite source code</a> (pick the second link, the tar.gz). Unpack it, then run: 
+
+<pre><code>./configure --enable-threadsafe
+make</code></pre>
+	</p>
+
+<p>After it's done, copy <code>.libs/sqlite.a</code> into <code>clarc/</code> source code folder.</p>
+
+	<p>
+		Then simply <code>make</code>. 
+	</p>
+
+<h2 id="todo">TODO</h2>
+
+<h3>Client-side encryption</h3> 
+
+<p>
+	As much as I trust Amazon I don't trust myself securely storing keys and someone else stealing my data. Therefor <b>clarc</b>  must 
+	(optionally of course) encrypt files before they are uploaded to Amazon S3.
+</p>
+
+<h3>Delete obsoleted files from S3</h3> 
+
+<p>
+	This feature is dangerous and absolutely not as simple as it looks. Before I begin implementing it I have to 
+	make sure the core of the application works good enough so that it properly generates and propagates error codes
+	thru the code. 
+</p>
+
+<p>
+	When the upload finishes with no errors and all files were uploaded correctly I can rescan the file system and
+	issue multiple DELETE command on the S3 bucket to delete files that don't exists anymore locally. This will only 
+	be done if additional option is specified on the commandline (<code>--delete</code>).
+</p>
+
+<h3>Script (config files)</h3> 
+
+<p>
+	Essentially this is just command line parsing from file instead of the command line. So instead of calling <code>clarc --source ...</code> you will invoce <code>clarc ./backup.ini</code> or something.
+</p>
+
+<h3>Exclude and include patterns</h3> 
+
+<p>
+	No you don't need to upload the whole <code>.git/</code> folder or <code>.DS_Store</code> in every place to the S3 bucket.
+	There will be two commands, <code>--exclude</code> and <code>--include</code> that will accept multiple regexps. 
+</p>
+
+<h3>Check UID, GID and mode changes</h3>
+
+<p>
+	Right now file and metadata is not updated on Amazon S3 if this is the only thing that changed. 
+</p>
+
+<h3>Restore</h3>
+
+<p>
+	Only one direction is implemented now: uploads from local folder to S3. Surely the other way is also required: download of the remote files into local folder. While it is possible to use other tools to download files (plenty are available), none of them recovers the metadata (UID, GID, permissions, etc). <b>clarc</b> should be able to restore folder as it was. 
+</p>
+
+<p>
+	<b>NOTE: clarc DOES store metadata information with Amazon, so you can safely use it for backups right now.</b> Once the download feature will be implemented, clarc will be able to download and restore already made backups.
+</p>
+
+<h3>Other pending enhancements</h3>
+
+<a href="https://github.com/egorFiNE/clarc/issues?labels=enhancement&page=1&state=open">I am tracking them at Github.</a>
+
+
+
+				</div><!-- entry-content -->
+			</div><!-- bd -->
+
+		</div><!-- content -->
+	</div><!-- unit-inner -->
+</article>
+
+
+				</div>
+			</div><!-- unit-inner -->
+		</div><!-- unit-body -->
+	</div><!-- body -->
+	<footer class="the-footer">
+		<div class="unit-foot">
+			<div class="unit-inner unit-foot-inner">
+				<div class="misc vcard">
+					<h4>About</h4>
+					<ul>
+						<li><address><span class="author fn n">Egor Egorov</span> &mdash; <span class="fn email">me@egorfine.com</span></address></li>
+						<li>Report bugs on <a href="https://github.com/egorFiNE/clarc/issues" rel="me">Github issues tracker</a></li>
+					</ul>
+				</div><!-- misc -->
+				<p class="licence">
+					Theme: <b>the_minimum</b> based on <a href="http://jekyllbootstrap.com/">Jekyll-bootstrap</a>.
+				</p>
+			</div><!-- unit-foot-inner -->
+		</div><!-- unit-foot -->
+	</footer>
+</div><!-- page -->
+
+</body>
+</html>
