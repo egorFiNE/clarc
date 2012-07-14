@@ -6,14 +6,13 @@ clarc \- sync local files to Amazon S3 cloud storage
 [\fIMODE\fR] [\fIOPTION\fR]... 
 .SH DESCRIPTION
 .B clarc
-copies all local files from a filesystem folder to a given Amazon S3 bucket. Only files that were changed/added since last 
-.B clarc
-invocation are uploaded. 
+is a utility that synchronizes local file system folder to Amazon S3. Only files that were changed/added since last 
+.B clarc 
+invocation are uploaded.
 
-Metadata and files list are stored in a small local database file in the same folder. This way 
-.B clarc
-can quickly determine what's changed without redownloading the whole list of files from Amazon. 
-It is also possible to rebuild the metadata database from Amazon S3.
+.B clarc 
+keeps track of changes by storing file metadata in a small local database. It possible to quickly rebuild the database from Amazon S3.
+
 .SH MODE
 The first option for 
 .B clarc
