@@ -1521,3 +1521,23 @@ a.download:active{position:relative;top:2px;}
 span.mandatory {
   color: #E66;
 }
+
+span.argument {
+  color: #888;
+}
+
+div.features {
+  float: right; 
+  width: 300px; 
+  padding: 0 0 0 10px; 
+  height: 100%;
+}
+
+ul.features {
+  list-style-image: url(check.png);
+}
+
+ul.features li {
+  font:20pt  sans-serif  !important;
+  margin-bottom: 10px;
+}

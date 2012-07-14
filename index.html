@@ -44,14 +44,17 @@
 				<div class="entry-content">
 
 <div>
-	<div style="float: right; border: solid red 1px; width: 250px; padding: 0 0 0 10px; height: 100%">
-		FIXME
+	<div class="features">
+		<ul class="features">
+			<li>Multithreaded</li>
+			<li>Linux and OS&nbsp;X support</li>
+			<li>Made with love</li>
+		</ul>
 	</div>
 
 	<div style="float: left; width: 70%; min-width: 300px; max-width: 600px;"> 
 		<p>
-			<b>clarc</b> is a *nix commandline utility that synchronizes local file system folder to Amazon S3.
-			Only files that were changed/added since last <b>clarc</b> invocation are uploaded.
+			<b>clarc</b> is a free *nix commandline utility that synchronizes local file system folder to <a href="http://aws.amazon.com/s3/">Amazon S3</a>. Only files that were changed/added since last <b>clarc</b> invocation are uploaded.
 		</p>
 
 
@@ -132,21 +135,23 @@
 <h3>Command-line options</h3>
 
 <dt>
-	<dt>--accessKeyId, --secretAccessKey <span class="mandatory">*</span></dt>
+	<dt>--source <span class="argument">&lt;path&gt;</span> <span class="mandatory">*</span></dt>
+	<dd>Actual absolute path to folder being uploaded.</dd>
+	<dt>--accessKeyId <span class="argument">&lt;string&gt;</span>, --secretAccessKey <span class="argument">&lt;string&gt;</span> <span class="mandatory">*</span></dt>
 	<dd>Amazon S3 Access Credentials. Get them <a href="https://portal.aws.amazon.com/gp/aws/securityCredentials">here</a>. 
-	<dt>--bucket <span class="mandatory">*</span></dt>
+	<dt>--bucket <span class="argument">&lt;string&gt;</span> <span class="mandatory">*</span></dt>
 	<dd>Name of the Amazon S3 bucket to store your files. Must exists. (Yes, I will later implement creation on demand.)</dd>
-	<dt>--endPoint <span class="mandatory">*</span></dt>
+	<dt>--endPoint <span class="argument">&lt;string&gt;</span> <span class="mandatory">*</span></dt>
 	<dd>Amazon S3 Endpoint. Specify rubbish to get the list of available endpoints 
 		or simply use the default one, which is suitable for all regions.</dd>
 	<dt>--rrs</dt>
 	<dd>Use <a href="http://aws.amazon.com/s3/faqs/#What_is_RRS">Reduced Redundancy Storage</a> instead of the Standard Storage.</dd>
 	<dt>--public</dt>
 	<dd>Make all uploaded files publicly accessible on Amazon S3. By default all files are private.</dd>
-	<dt>--databasePath</dt>
+	<dt>--databasePath <span class="argument">&lt;path&gt;</span></dt>
 	<dd>Absolute path to local database file instead of the default path. 
 		By default it's the source folder. <b>Note:</b> this argument MUST NOT specify file name.</dd>
-	<dt>--databaseFilename</dt>
+	<dt>--databaseFilename <span class="argument">&lt;file name&gt;</span></dt>
 	<dd>File name for the database. By default it's <code>.files.sqlite3</code>.
 	<dt>--version, --help</dt>
 	<dd>Says something.</dd>
@@ -188,14 +193,20 @@
 		</ul>
 	</dd>
 
-	<dt>I have downloaded a binary build it says Permission denied</dt>
+	<dt>I have downloaded the binary file and it says Permission denied</dt>
 	<dd><code>chmod +x</code> it.</dd>
+
+	<dt>I have downloaded the binary but nothing happens when I click on it</dt>
+	<dd>It's a <i>command-line</i> application. You won't be able to use it.</dd>
 
 	<dt>I cannot build it on a 32bit architecture</dt>
 	<dd>I tried, too and it failed somewhere in libcurl headers. I don't think it is entirely impossible but I have close to zero interest in trying. If you manage to make a 32bit build on a 64bit arch host - please let me know how, I will for sure add your knowledge to my build instructions.</dd>
 
 	<dt>C++ sucks</dt>
 	<dd>In fact the tool is written in C. I only use C++ <code>class</code> as a syntax sugar. Yes it could all be done in plain C but this would be ugly.</dd>
+
+	<dt>What about Windows?</dt>
+	<dd>What about Windows?</dd>
 
 	<dt>What license is clarc available under?</dt>
 	<dd>FIXME</dd>
