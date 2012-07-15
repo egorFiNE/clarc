@@ -7,7 +7,6 @@ using namespace std;
 #include <stdlib.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <curl/curl.h>
 #include <errno.h>
 #include <dispatch/dispatch.h>

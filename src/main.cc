@@ -7,17 +7,9 @@ extern "C" {
 #include <stdlib.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <curl/curl.h>
 #include <errno.h>
 #include <sqlite3.h>
-#include <openssl/lhash.h>
-#include <openssl/crypto.h>
-#include <openssl/buffer.h>
-#include <openssl/x509.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/rand.h>
 #include <getopt.h>
 #include "help.h"
 }

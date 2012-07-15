@@ -8,7 +8,6 @@ using namespace std;
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <unistd.h>
 #include <errno.h>
 #include "amazonCredentials.h"
 

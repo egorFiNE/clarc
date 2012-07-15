@@ -9,7 +9,6 @@ using namespace std;
 #include <stdlib.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <curl/curl.h>
 #include <errno.h>
 #include <sqlite3.h>
@@ -21,6 +20,12 @@ extern "C" {
 #include "curlResponse.h"
 #include <pwd.h>
 #include <grp.h>
+
+// this is declared explicitly instead of including unistd.h because some
+// linux distributions have clang broken with it. Fortunately, sleep() is 
+// the same on all sane OS.
+unsigned int sleep(unsigned int seconds);
+
 }
 
 #include "localFileList.h"
