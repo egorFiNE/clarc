@@ -47,6 +47,7 @@
 	<div class="features">
 		<ul class="features">
 			<li>Multithreaded</li>
+			<li>Consistent</li>
 			<li>Linux and OS&nbsp;X support</li>
 			<li>Made with love</li>
 		</ul>
@@ -193,16 +194,16 @@
 		</ul>
 	</dd>
 
-	<dt>I have downloaded the binary file and it says Permission denied</dt>
+	<dt>I have downloaded the binary file and it says Permission denied.</dt>
 	<dd><code>chmod +x</code> it.</dd>
+
+	<dt>I am uploading to european S3 bucket in Ireland and keep getting "Connection reset by peer".</dt>
+	<dd>Nothing we can do at this point: <a href="http://www.google.com/search?q=amazon+s3+connection+reset+by+peer">it's a known bug</a>. Try <a href="http://scie.nti.st/2008/3/14/amazon-s3-and-connection-reset-by-peer">this</a>.</dd>
 
 	<dt>I have downloaded the binary but nothing happens when I click on it</dt>
 	<dd>It's a <i>command-line</i> application. You won't be able to use it.</dd>
 
-	<dt>I cannot build it on a 32bit architecture</dt>
-	<dd>I tried, too and it failed somewhere in libcurl headers. I don't think it is entirely impossible but I have close to zero interest in trying. If you manage to make a 32bit build on a 64bit arch host - please let me know how, I will for sure add your knowledge to my build instructions.</dd>
-
-	<dt>C++ sucks</dt>
+	<dt>C++ sucks!</dt>
 	<dd>In fact the tool is written in C. I only use C++ <code>class</code> as a syntax sugar. Yes it could all be done in plain C but this would be ugly.</dd>
 
 	<dt>What about Windows?</dt>
@@ -220,33 +221,82 @@
 -->
 </dl>
 
-<h2 id="build">Build</h2>
+<h2 id="build">Install / Build</h2>
+
+<h3>Run on Linux</h3>
+
+<p>
+	<b>clarc</b> is built on <a href="http://en.wikipedia.org/wiki/Grand_Central_Dispatch">Grand Central Dispatch</a> to use all available CPU cores, network bandwidth and disk speed. In order to run <b>clarc</b> binary on Linux you will need the following libraries installed: 
+	<ul>
+		<li>libdispatch</li>
+		<li>libcurl with SSL support</li>
+		<li>libxml2</li>
+	</ul>
+	On a modern Linux distribution (except Fedora) this is all available out of the box
+</p>
+
+<p>To install this libraries on <b>Ubuntu 12</b> run:</p>
+<pre><code>sudo apt-get install libdispatch0</code></pre>
+
+<p>To install this libraries on <b>Debian 6.0.5</b> run:</p>
+<pre><code>sudo apt-get install libcurl3 libdispatch0</code></pre>
 
 <h3>Build on Linux</h3>
 
 <p>
-	<b>clarc</b> is using <a href="http://en.wikipedia.org/wiki/Grand_Central_Dispatch">Grand Central Dispatch</a> and <a href="http://en.wikipedia.org/wiki/Blocks_(C_language_extension)">C Blocks</a> to use all available CPU cores, network bandwidth and disk speed. In order to build <b>clarc</b> on Linux you will need the <a href="http://clang.llvm.org/">clang</a> C/C++ compiler and the following libraries installed: 
-		<ul>
-			<li>libdispatch</li>
-			<li>libcurl with SSL support</li>
-			<li>libxml2</li>
-		</ul>
+	To build <b>clarc</b> you need <a href="http://clang.llvm.org/">clang C/C++ compiler</a> as well as library headers. 
+</p>
+
+	<p>
+		To install build dependencies on <b>Ubuntu 12:</b>
+		<pre><code>sudo apt-get install build-essential clang libxml2-dev libsqlite3-dev <span class="codeBackslash">\</span>
+     libcurl4-openssl-dev libdispatch-dev</code></pre>
 	</p>
 
 	<p>
-		On a modern Linux distribution this is all available out of the box. For instance, on Ubuntu 12 do:
-		<pre><code>sudo apt-get install libblocksruntime-dev libdispatch clang</code></pre>
+		To install build dependencies on <b>Debian 6.0.5:</b>
+		<pre><code>sudo apt-get install clang libdispatch-dev gcc make gcc++ <span class="codeBackslash">\</span>
+     libstdc++6-4.4-dev g++ libsqlite3-dev libcurl4-openssl-dev libxml2-dev</code></pre>
 	</p>
 
 	<p>
 		Then simply <code>make</code>. 
 	</p>
 
+<h3>Build on Fedora Linux</h3>
+
+<p>
+	It is incredibly complex as <a href="https://bugzilla.redhat.com/show_bug.cgi?id=824406">clang++ is broken on Fedora 17</a>. The procedure works but it's not for the faint of the heart so I'd suggest you use by prebuild binary. Heck, it's even different for i386 and x86_64 Fedoras! :-(
+</p>
+
+<p>
+	0. Install build dependencies.
+<pre><code>sudo yum install libstdc++-devel libstdc++ gcc gcc-g++ clang <span class="codeBackslash">\</span>
+     clang-devel llvm-libs llvm-devel libcurl-devel libsqlite3x-devel <span class="codeBackslash">\</span>
+     libxml2-devel rpm-build</code></pre>
+</p>
+
+<p>
+	1. Build <code>libdispatch</code> with SRPMS available here: <a href="http://mark.heily.com/node/51/release">http://mark.heily.com/node/51/release</a>. Install the resulting RPMS (you might want to add <code>--nodeps</code>). If <code>libdispatch</code> doesn't build, you might need to move <code>/usr/lib/pkgconfig/*</code> to <code>/usr/share/pkgconfig/</code>.
+</p>
+
+<p>
+	2. Go to <code>clarc/src/</code> and remove all <code style="white-space: nowrap">#include &lt;iostream&gt;</code> and <<code style="white-space: nowrap">#include &lt;unistd.h&gt;</code> from files.  
+</p>
+
+<p>
+	3. In <code>upload.cc</code> add the following right after <code>extern "C" {</code>:
+	<pre><code>unsigned int sleep(unsigned int seconds);</pre></code>
+
+<p>
+	4. <code>make</code>
+</p>
+
 <h3>Build on OS X</h3>
 
 <p>OS X has GCD and clang available by default, but you must have Xcode (or Xcode command-line tools) installed. </p>
 
-<p>First, you have to download the <a href="http://www.sqlite.org/download.html">latest SQLite source code</a> (pick the second link, the tar.gz). Unpack it, then run: 
+<p>However SQLite3 is better to be rebuilt with threads support. Download the <a href="http://www.sqlite.org/download.html">latest SQLite source code</a> (pick the second link, the tar.gz). Unpack it, then run: 
 
 <pre><code>./configure --enable-threadsafe
 make</code></pre>
