@@ -418,12 +418,14 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 		}
 		
 		char *contentType = guessContentType(path);
+
+		__block Uploader *self = this;
 	
 		dispatch_semaphore_wait(threadsCount, DISPATCH_TIME_FOREVER);
 		dispatch_group_async(group, globalQueue, ^{
 			char errorResult[1024*100];
 			if (!failed) {
-				int res = this->uploadFileWithRetryAndStore(
+				int res = self->uploadFileWithRetryAndStore(
 					fileListStorage, realLocalPath, path, contentType, 
 					&fileInfo,
 					sqlQueue,

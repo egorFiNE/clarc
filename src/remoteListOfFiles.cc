@@ -393,6 +393,8 @@ int RemoteListOfFiles::resolveMtimes() {
 	
 	__block int failed = 0;
 
+	__block RemoteListOfFiles *self = this;
+
 	for (i=0;i<this->count; i++) {
 		dispatch_semaphore_wait(threadsCount, DISPATCH_TIME_FOREVER);
 		
@@ -401,24 +403,24 @@ int RemoteListOfFiles::resolveMtimes() {
 				char errorResult[1024*100] = "";
 				uint32_t mtime=0, statusCode=0;
 
-				int res = this->performHeadOnFile(this->paths[i], &mtime, &statusCode, errorResult);
+				int res = self->performHeadOnFile(self->paths[i], &mtime, &statusCode, errorResult);
 				if (res==HEAD_FAILED) {
-					printf("\n[MetaUpdate] FAIL %s: %s\n", this->paths[i], errorResult);
+					printf("\n[MetaUpdate] FAIL %s: %s\n", self->paths[i], errorResult);
 					failed=1;
 					dispatch_semaphore_signal(threadsCount);							
 					return;
 				}
 
 				if (statusCode!=200) {
-					printf("\n[MetaUpdate] FAIL %s: HTTP status=%d\n", this->paths[i], statusCode);
+					printf("\n[MetaUpdate] FAIL %s: HTTP status=%d\n", self->paths[i], statusCode);
 					failed=1;
 					dispatch_semaphore_signal(threadsCount);							
 					return;
 				}
 
-				this->mtimes[i] = mtime;
-				double percent = (double) i / (double) this->count;
-				printf("\r[MetaUpdate] Updated %.1f%% (%u files out of %u)     \r", percent*100, (uint32_t) i, this->count);
+				self->mtimes[i] = mtime;
+				double percent = (double) i / (double) self->count;
+				printf("\r[MetaUpdate] Updated %.1f%% (%u files out of %u)     \r", percent*100, (uint32_t) i, self->count);
 			}
 
 			dispatch_semaphore_signal(threadsCount);							
