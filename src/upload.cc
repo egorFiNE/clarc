@@ -83,6 +83,18 @@ Uploader::~Uploader() {
 	this->amazonCredentials = NULL;
 }
 
+void Uploader::extractLocationFromHeaders(char *headers, char *locationResult) {
+	*locationResult=0;
+  char *locationPointer = strstr(headers, "Location: ");
+  if (locationPointer) {
+    char *endPointer = strchr(locationPointer, '\n');
+    int len = (endPointer - locationPointer);
+    strncpy(locationResult, locationPointer, len);
+    *(locationResult+len)=0;
+  }
+}
+
+
 void Uploader::extractMD5FromETagHeaders(char *headers, char *md5) {
 	*md5=0;
 	char *etag = strstr(headers, "ETag: ");
@@ -92,9 +104,11 @@ void Uploader::extractMD5FromETagHeaders(char *headers, char *md5) {
 	}
 }
 
+
 CURLcode Uploader::uploadFile(
 	char *localPath, 
 	char *remotePath, 
+	char *url,
 	char *contentType, 
 	struct stat *fileInfo, 	
 	uint32_t *httpStatusCode, 
@@ -168,7 +182,12 @@ CURLcode Uploader::uploadFile(
 		return UPLOAD_FILE_FUNCTION_FAILED;
 	}
 
-  char *url = amazonCredentials->generateUrl(escapedRemotePath); 
+	char *postUrl;
+	if (url) {
+		postUrl = strdup(url);
+	} else { 
+	  postUrl = amazonCredentials->generateUrl(escapedRemotePath); 
+	}
 	free(escapedRemotePath);
 
   struct CurlResponse curlResponse;
@@ -178,8 +197,8 @@ CURLcode Uploader::uploadFile(
   curl_easy_setopt(curl, CURLOPT_PUT, 1L);
   //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
 
-  curl_easy_setopt(curl, CURLOPT_URL, url);
-	free(url);
+  curl_easy_setopt(curl, CURLOPT_URL, postUrl);
+	free(postUrl);
 
   curl_easy_setopt(curl, CURLOPT_READDATA, fin);
 
@@ -249,7 +268,11 @@ CURLcode Uploader::uploadFile(
 		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &_httpStatus);
 	  *httpStatusCode = (uint32_t) _httpStatus;
 
-	  this->extractMD5FromETagHeaders(curlResponse.headers, md5);
+	  if (_httpStatus==307) {
+		  this->extractLocationFromHeaders(curlResponse.headers, errorResult);
+	  } else if (_httpStatus==200) { 
+		  this->extractMD5FromETagHeaders(curlResponse.headers, md5);
+	  }
 
 	  curl_easy_cleanup(curl);
 	  free(curlErrors);
@@ -278,10 +301,21 @@ int Uploader::uploadFileWithRetry(
 	char *errorResult
 ) {
 	int cUploads=0;
+	char *url = NULL;
 	do {
 		errorResult[0]=0;
-		CURLcode res=this->uploadFile(localPath, remotePath, contentType, fileInfo, httpStatusCode, md5, errorResult);
+		CURLcode res=this->uploadFile(localPath, remotePath, url, contentType, fileInfo, httpStatusCode, md5, errorResult);
+		if (*httpStatusCode==307) {
+			url = strdup(errorResult);
+			cUploads=0;
+			printf("\n[Upload] Retrying %s: Amazon asked to reupload to: %s\n", remotePath, errorResult);
+			continue;
+		}
+
 		if (res==CURLE_OK) {
+			if (url) {
+				free(url);
+			}
 			return UPLOAD_SUCCESS;
 		}
 
@@ -289,10 +323,17 @@ int Uploader::uploadFileWithRetry(
 			int sleepTime = cUploads*RETRY_SLEEP_TIME; 
 			sleep(sleepTime);
 		} else { 
+			if (url) {
+				free(url);
+			}
 			return UPLOAD_FAILED;
 		}
 		cUploads++;
 	} while (cUploads<RETRY_FAIL_AFTER); 
+
+	if (url) {
+		free(url);
+	}
 
 	return UPLOAD_FAILED;
 }

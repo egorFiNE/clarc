@@ -31,6 +31,7 @@ private:
 	CURLcode uploadFile(
 		char *localPath, 
 		char *remotePath, 
+		char *url,
 		char *contentType, 
 		struct stat *fileInfo,
 		uint32_t *httpStatusCode, 
@@ -47,6 +48,7 @@ private:
 		char *errorResult
 	);
 	void extractMD5FromETagHeaders(char *headers, char *md5);
+	void extractLocationFromHeaders(char *headers, char *locationResult);
 	char *createRealLocalPath(char *prefix, char *path);
 
 public:
