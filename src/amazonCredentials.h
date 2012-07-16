@@ -27,5 +27,4 @@ public:
 	char *endPoint;
 };
 
-
 #endif

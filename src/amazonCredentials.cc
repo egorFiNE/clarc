@@ -13,7 +13,6 @@ extern "C" {
 #include "utils.h"
 }
 
-
 AmazonCredentials::AmazonCredentials(char *accessKeyId, char *secretAccessKey, char *bucket, char *endPoint) {
 	this->accessKeyId = strdup(accessKeyId);
 	this->secretAccessKey = strdup(secretAccessKey);
@@ -28,11 +27,19 @@ AmazonCredentials::~AmazonCredentials() {
 	free(this->endPoint);
 }
 
-
 char *AmazonCredentials::generateUrl(char *remotePath) {
-	char *resultUrl = (char *) malloc(strlen(this->bucket) + strlen(this->endPoint) + strlen(remotePath) + 16);
+	if (remotePath==NULL) {
+		return NULL;
+	}
+
+	char *remotePathToUse = remotePath;
+	if (remotePathToUse[0]=='/') {
+		remotePathToUse++;
+	}
+
+	char *resultUrl = (char *) malloc(strlen(this->bucket) + strlen(this->endPoint) + strlen(remotePathToUse) + 16);
 	resultUrl[0]=0;
-  sprintf(resultUrl, "http://%s.%s/%s", this->bucket, this->endPoint, remotePath);
+  sprintf(resultUrl, "http://%s.%s/%s", this->bucket, this->endPoint, remotePathToUse);
   return resultUrl;
 }
 
