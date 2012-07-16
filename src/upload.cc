@@ -305,6 +305,7 @@ int Uploader::uploadFileWithRetry(
 	do {
 		errorResult[0]=0;
 		CURLcode res=this->uploadFile(localPath, remotePath, url, contentType, fileInfo, httpStatusCode, md5, errorResult);
+
 		if (*httpStatusCode==307) {
 			url = strdup(errorResult);
 			cUploads=0;
@@ -320,6 +321,7 @@ int Uploader::uploadFileWithRetry(
 		}
 
 		if (HTTP_SHOULD_RETRY_ON(res)) {
+			printf("\n[Upload] Retrying %s (%d)\n", remotePath, res);
 			int sleepTime = cUploads*RETRY_SLEEP_TIME; 
 			sleep(sleepTime);
 		} else { 
