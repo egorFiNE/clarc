@@ -295,7 +295,6 @@ int main(int argc, char *argv[]) {
 		uploader->makeAllPublic = makeAllPublic;
 
 		res = uploader->uploadFiles(fileListStorage, source);
-		printf("[Upload] All done\n");
 
 		if (res==UPLOAD_FAILED) {
 			exit(1);

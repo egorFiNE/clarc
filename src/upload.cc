@@ -496,7 +496,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 	}
 
 	dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
-	printf("\n[Upload] All uploads done.\n");
+	printf("\n[Upload] Finished.\n");
 
 	delete files;
 
