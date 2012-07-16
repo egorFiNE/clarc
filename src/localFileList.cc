@@ -19,7 +19,6 @@ LocalFileList::LocalFileList() {
 }
 
 LocalFileList::~LocalFileList() {
-	fflush(stdout);
 	for (uint32_t i=0;i<this->count;i++) {
 		free(this->paths[i]);
 	}
