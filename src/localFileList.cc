@@ -28,7 +28,7 @@ LocalFileList::~LocalFileList() {
 }
 
 void LocalFileList::add(char *path, uint64_t size) {
-	this->paths[this->count] = path;
+	this->paths[this->count] = strdup(path);
 	this->sizes[this->count] = size;
 	this->count++;
 	if (this->count>=this->allocCount) {
@@ -64,6 +64,7 @@ void LocalFileList::recurseIn(char *path, char *prefix) {
 				this->add(fullName, (uint64_t) fileInfo.st_size);
 			}
 			free(statName);
+			free(fullName);
 
 		} else if (dp->d_type == DT_DIR) {
 			if (strcmp(dp->d_name, ".")!=0 && strcmp(dp->d_name, "..")!=0) {

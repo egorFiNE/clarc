@@ -23,8 +23,9 @@ public:
 	~LocalFileList();
 
 	void add(char *path, uint64_t size);
-	void recurseIn(char *path, char *prefix);
 	uint64_t calculateTotalSize();
+	
+	void recurseIn(char *path, char *prefix);
 	
 	char **paths;
 	uint64_t *sizes;
