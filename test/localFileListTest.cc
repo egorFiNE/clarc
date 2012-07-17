@@ -12,26 +12,27 @@ extern "C" {
 #include <sqlite3.h>
 #include <getopt.h>
 #include <check.h>
+#include "test.h"
 }
 
 #include "localFileList.h"
 
 LocalFileList *localFileList;
 
-void setup(void) {
+void LocalFileList_setup(void) {
 	localFileList = new LocalFileList();
 }
 
-void teardown(void) {
+void LocalFileList_teardown(void) {
 	delete localFileList;
 }
 
-START_TEST(empty) {
+START_TEST(LocalFileList_empty) {
 	fail_unless(localFileList->count==0);
 	fail_unless(localFileList->calculateTotalSize()==0);
 } END_TEST
 
-START_TEST(addFiles) {
+START_TEST(LocalFileList_addFiles) {
 	localFileList->add("/nowhere", 201);
 	fail_unless(localFileList->count==1);
 	fail_unless(localFileList->calculateTotalSize()==201);
@@ -42,8 +43,8 @@ START_TEST(addFiles) {
 } END_TEST
 
 
-START_TEST(recurseIn) {
-	localFileList->recurseIn("", "./recurse-in-test");
+START_TEST(LocalFileList_recurseIn) {
+	localFileList->recurseIn("", "./data/recurse-in-test");
 	fail_unless(localFileList->count==4);
 	fail_unless(localFileList->calculateTotalSize()==17);
 	fail_unless(strcmp(localFileList->paths[0], "/123")==0);
@@ -52,29 +53,39 @@ START_TEST(recurseIn) {
 	fail_unless(localFileList->sizes[1]==5);
 } END_TEST
 
+START_TEST(LocalFileList_recurseInEmpty) {
+	localFileList->recurseIn("", "./data/recurse-in-test-empty");
+	fail_unless(localFileList->count==0);
+	fail_unless(localFileList->calculateTotalSize()==0);
+} END_TEST
+
+START_TEST(LocalFileList_recurseInEmptySubdir) {
+	char path[1024] = "./data/recurse-in-test-empty-subdir";
+	mkdir(path, 0755);
+	char path2[1024];
+	sprintf(path2, "%s/%s", path, "sirko");
+	mkdir(path2, 0755);
+
+	localFileList->recurseIn("", path);
+	fail_unless(localFileList->count==0);
+	fail_unless(localFileList->calculateTotalSize()==0);
+} END_TEST
+
 Suite *LocalFileListSuite(void) {
 	Suite *s = suite_create("LocalFileList");
 
 	TCase *tc1 = tcase_create("non-filesystem tests");
-	tcase_add_checked_fixture (tc1, setup, teardown);
-	tcase_add_test(tc1, empty);
-	tcase_add_test(tc1, addFiles);
+	tcase_add_checked_fixture (tc1, LocalFileList_setup, LocalFileList_teardown);
+	tcase_add_test(tc1, LocalFileList_empty);
+	tcase_add_test(tc1, LocalFileList_addFiles);
 	suite_add_tcase(s, tc1);
 
 	TCase *tc2 = tcase_create("filesystem tests");
-	tcase_add_checked_fixture (tc2, setup, teardown);
-	tcase_add_test(tc2, recurseIn);
+	tcase_add_checked_fixture (tc2, LocalFileList_setup, LocalFileList_teardown);
+	tcase_add_test(tc2, LocalFileList_recurseIn);
+	tcase_add_test(tc2, LocalFileList_recurseInEmpty);
+	tcase_add_test(tc2, LocalFileList_recurseInEmptySubdir);
 	suite_add_tcase(s, tc2);
 
 	return s;
-}
-
-int main(int argc, char *argv[]) {
-	int number_failed;
-	Suite *s = LocalFileListSuite();
-	SRunner *sr = srunner_create(s);
-	srunner_run_all(sr, CK_VERBOSE);
-	number_failed = srunner_ntests_failed(sr);
-	srunner_free(sr);
-	return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

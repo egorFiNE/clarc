@@ -12,13 +12,14 @@ extern "C" {
 #include <sqlite3.h>
 #include <getopt.h>
 #include <check.h>
+#include "test.h"
 }
 
 #include "amazonCredentials.h"
 
 AmazonCredentials *amazonCredentials;
 
-void setup(void) {
+void AmazonCredentials_setup(void) {
   amazonCredentials = new AmazonCredentials(
   	"AKIAIOSFODNN7EXAMPLE", 
   	"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
@@ -26,11 +27,11 @@ void setup(void) {
   );
 }
 
-void teardown(void) {
+void AmazonCredentials_teardown(void) {
 	delete amazonCredentials;
 }
 
-START_TEST(generateUrl) {
+START_TEST(AmazonCredentials_generateUrl) {
 	char *path;
 
 	path = amazonCredentials->generateUrl("wow.html");
@@ -50,7 +51,7 @@ START_TEST(generateUrl) {
 } END_TEST
 
 
-START_TEST(createAuthorizationHeader) {
+START_TEST(AmazonCredentials_createAuthorizationHeader) {
 	char stringToSign[2048] = 
 		"GET\n" \
 		"\n" \
@@ -67,21 +68,12 @@ START_TEST(createAuthorizationHeader) {
 Suite *AmazonCredentialsSuite(void) {
 	Suite *s = suite_create("AmazonCredentials");
 
-	TCase *tc_core = tcase_create("AmazonCredentials");
-	tcase_add_checked_fixture (tc_core, setup, teardown);
-	tcase_add_test(tc_core, generateUrl);
-	tcase_add_test(tc_core, createAuthorizationHeader);
-	suite_add_tcase(s, tc_core);
+	TCase *tc = tcase_create("AmazonCredentials");
+	tcase_add_checked_fixture (tc, AmazonCredentials_setup, AmazonCredentials_teardown);
+	tcase_add_test(tc, AmazonCredentials_generateUrl);
+	tcase_add_test(tc, AmazonCredentials_createAuthorizationHeader);
+	suite_add_tcase(s, tc);
 
 	return s;
 }
 
-int main(int argc, char *argv[]) {
-	int number_failed;
-	Suite *s = AmazonCredentialsSuite();
-	SRunner *sr = srunner_create(s);
-	srunner_run_all(sr, CK_VERBOSE);
-	number_failed = srunner_ntests_failed(sr);
-	srunner_free(sr);
-	return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
-}
