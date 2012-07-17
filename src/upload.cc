@@ -85,9 +85,18 @@ Uploader::~Uploader() {
 
 void Uploader::extractLocationFromHeaders(char *headers, char *locationResult) {
 	*locationResult=0;
+	if (!headers) {
+		return;
+	}
   char *locationPointer = strstr(headers, "Location: ");
   if (locationPointer) {
     char *endPointer = strchr(locationPointer, '\n');
+    if (!endPointer) {
+    	endPointer = (locationPointer + strlen(locationPointer));
+    }
+    if (endPointer==locationPointer) {
+    	return;
+    }
     int len = (endPointer - locationPointer);
     strncpy(locationResult, (locationPointer+10), len-10);
     *(locationResult+len-10)=0;
@@ -97,10 +106,21 @@ void Uploader::extractLocationFromHeaders(char *headers, char *locationResult) {
 
 void Uploader::extractMD5FromETagHeaders(char *headers, char *md5) {
 	*md5=0;
+	if (!headers) {
+		return;
+	}
+
+	if (strlen(headers)<7+32) {
+		return;
+	}
+
 	char *etag = strstr(headers, "ETag: ");
 	if (etag) {
-		strncpy(md5, (etag+7), 32);
-		*(md5+32)=0;
+		char *pos = (etag+6);
+		if (strlen(pos)>=34 && *pos==0x22 && *(pos+33)==0x22) {
+			strncpy(md5, (pos+1), 32);
+			*(md5+32)=0;
+		}
 	}
 }
 
@@ -269,9 +289,9 @@ CURLcode Uploader::uploadFile(
 	  *httpStatusCode = (uint32_t) _httpStatus;
 
 	  if (_httpStatus==307) {
-		  this->extractLocationFromHeaders(curlResponse.headers, errorResult);
+		  Uploader::extractLocationFromHeaders(curlResponse.headers, errorResult);
 	  } else if (_httpStatus==200) { 
-		  this->extractMD5FromETagHeaders(curlResponse.headers, md5);
+		  Uploader::extractMD5FromETagHeaders(curlResponse.headers, md5);
 	  }
 
 	  curl_easy_cleanup(curl);
@@ -417,7 +437,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 	
 		// we don't skip the storage file. We will just re upload it later.
 
-		char *realLocalPath = this->createRealLocalPath(prefix, path);
+		char *realLocalPath = Uploader::createRealLocalPath(prefix, path);
 		
 		__block struct stat fileInfo;
 		if (lstat(realLocalPath, &fileInfo)<0) {

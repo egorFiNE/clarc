@@ -65,6 +65,13 @@ FileListStorage::~FileListStorage() {
 }
 
 int FileListStorage::lookup(char *remotePath, char *md5, uint64_t *mtime) {
+	md5[0]=0;
+	*mtime=0;
+
+	if (remotePath==NULL) {
+		return STORAGE_SUCCESS;
+	}
+
 	sqlite3_stmt *selectFileStmt=NULL;
 	
 	if (sqlite3_prepare(this->sqlite, "SELECT md5, mtime FROM files WHERE filePath=?", -1, &selectFileStmt, 0) != SQLITE_OK) {

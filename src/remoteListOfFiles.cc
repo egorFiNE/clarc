@@ -45,18 +45,30 @@ RemoteListOfFiles::~RemoteListOfFiles() {
 	this->amazonCredentials = NULL;
 }
 
-void RemoteListOfFiles::extractMtimeFromHeaders(char *headers, uint32_t *mtime) {
-	*mtime = 0;
+uint32_t RemoteListOfFiles::extractMtimeFromHeaders(char *headers) {
+	if (!headers) {
+		return 0;
+	}
 	char *str = strstr(headers, "x-amz-meta-mtime: ");
 	if (str) { 
 		char another[11];
 		bzero(another, 11);
 		strncpy(another, (str+18), 10);
-		*mtime = (uint32_t) atoll(another);
+		return (uint32_t) atoll(another);
 	}
+	return 0;
 }
 
 char *RemoteListOfFiles::extractMd5FromEtag(char *etag) {
+	if (!etag) {
+		return NULL;
+	}
+
+	if (strlen(etag)<3) {
+		// can etag be one char?... 
+		return NULL;
+	}
+
 	size_t len = strlen(etag)-1;
 	char *md5 = (char *) malloc(len);
 	bzero(md5, len);
@@ -80,6 +92,10 @@ void RemoteListOfFiles::add(char *path, char *md5) {
 }
 
 int RemoteListOfFiles::parseListOfFiles(char *body, uint64_t bodySize, uint8_t *isTruncated, char *lastKey, char *errorResult) {
+	strcpy(errorResult, "");
+	strcpy(lastKey, "");
+	*isTruncated=0;
+
 	xmlDocPtr doc;
 	xmlNodePtr cur;
 
@@ -109,25 +125,28 @@ int RemoteListOfFiles::parseListOfFiles(char *body, uint64_t bodySize, uint8_t *
 	cur = cur->xmlChildrenNode;
 	while (cur != NULL) {
 		if ((!xmlStrcmp(cur->name, (const xmlChar *)"Contents"))){
-			char *md5=NULL; 
+			char *md5=NULL; int keyFound=0;
 
 			xmlNodePtr cur2 = cur->xmlChildrenNode;
 			while (cur2 != NULL) {
 				if ((!xmlStrcmp(cur2->name, (const xmlChar *)"Key"))) {
 					xmlChar *key = xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1);
 					strcpy(lastKey, (char *)key);
+					keyFound=1;
 					xmlFree(key);
 
 				} else if ((!xmlStrcmp(cur2->name, (const xmlChar *)"ETag"))) {
 					xmlChar *key = xmlNodeListGetString(doc, cur2->xmlChildrenNode, 1);
-					md5 = this->extractMd5FromEtag((char *)key);
+					md5 = RemoteListOfFiles::extractMd5FromEtag((char *)key);
 					xmlFree(key);
 				}
 				cur2 = cur2->next;
 			}
 
-			this->add(lastKey, md5);
-			free(md5);
+			if (md5 && keyFound) {
+				this->add(lastKey, md5);
+				free(md5);
+			}
 
 		} else if ((!xmlStrcmp(cur->name, (const xmlChar *)"IsTruncated"))) {
 			xmlChar *key = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
@@ -361,7 +380,7 @@ int RemoteListOfFiles::performHeadOnFile(char *remotePath, uint32_t *remoteMtime
 		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpStatus);
 	  *statusCode = (uint32_t) httpStatus;
 
-		this->extractMtimeFromHeaders(curlResponse.headers, remoteMtime);
+		*remoteMtime = RemoteListOfFiles::extractMtimeFromHeaders(curlResponse.headers);
 
 	  curl_easy_cleanup(curl);
 		CurlResponseFree(&curlResponse);

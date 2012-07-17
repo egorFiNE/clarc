@@ -47,9 +47,10 @@ private:
 		dispatch_queue_t sqlQueue,
 		char *errorResult
 	);
-	void extractMD5FromETagHeaders(char *headers, char *md5);
-	void extractLocationFromHeaders(char *headers, char *locationResult);
-	char *createRealLocalPath(char *prefix, char *path);
+
+	static void extractMD5FromETagHeaders(char *headers, char *md5);
+	static void extractLocationFromHeaders(char *headers, char *locationResult);
+	static char *createRealLocalPath(char *prefix, char *path);
 
 public:
 	Uploader(AmazonCredentials *amazonCredentials);

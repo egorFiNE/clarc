@@ -17,8 +17,8 @@ private:
 	AmazonCredentials *amazonCredentials;
 	uint32_t allocCount;
 
-	char *extractMd5FromEtag(char *etag);
-	void extractMtimeFromHeaders(char *headers, uint32_t *mtime);
+	static char *extractMd5FromEtag(char *etag);
+	static uint32_t extractMtimeFromHeaders(char *headers);
 
 	int parseListOfFiles(char *body, uint64_t bodySize, uint8_t *isTruncated, char *lastKey, char *errorResult);
 	int performGetOnBucket(char *marker, int setLocationHeader, char *body, uint64_t *bodySize, uint32_t *statusCode, char *errorResult);
