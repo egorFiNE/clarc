@@ -76,7 +76,7 @@ char *readXml(int num) {
 	if (!f) {
 		return NULL;
 	}
-	uint32_t len = 500*1024*1024;
+	uint32_t len = 800*1024*1024;
 
 	char *sirko = (char *)malloc(len); 
 	bzero(sirko, len);
@@ -87,13 +87,6 @@ char *readXml(int num) {
 }
 
 START_TEST(RemoteListOfFiles_parseFirstXML) {
-  remoteListOfFiles_amazonCredentials = new AmazonCredentials(
-  	"AKIAIOSFODNN7EXAMPLE", 
-  	"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-  	"bucket", "end-point"
-  );
-	remoteListOfFiles = new RemoteListOfFiles(remoteListOfFiles_amazonCredentials);
-
 	char *xml = readXml(0);
 	fail_unless(strlen(xml)>0);
 
@@ -116,14 +109,26 @@ START_TEST(RemoteListOfFiles_parseFirstXML) {
 } END_TEST
 
 START_TEST(RemoteListOfFiles_parseSecondXML) {
-	char *xml = readXml(1);
-	fail_unless(strlen(xml)>0);
-
-	char lastKey[1024]="";
-	char errorResult[1024]="";
+	char lastKey[10240]="";
+	char errorResult[10240]="";
 	uint8_t isTruncated=0;
 	int res;
 
+  remoteListOfFiles_amazonCredentials = new AmazonCredentials(
+  	"AKIAIOSFODNN7EXAMPLE", 
+  	"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+  	"bucket", "end-point"
+  );
+	remoteListOfFiles = new RemoteListOfFiles(remoteListOfFiles_amazonCredentials);
+
+	char *xml = readXml(0);
+	fail_unless(strlen(xml)>0);
+	res=remoteListOfFiles->parseListOfFiles(xml, strlen(xml), &isTruncated, lastKey, errorResult);
+	fail_unless(res==1);
+	fail_unless(isTruncated==1);
+
+	xml = readXml(1);
+	fail_unless(strlen(xml)>0);
 	res=remoteListOfFiles->parseListOfFiles(xml, strlen(xml), &isTruncated, lastKey, errorResult);
 	fail_unless(res==1);
 	fail_unless(isTruncated==0);
@@ -136,8 +141,8 @@ START_TEST(RemoteListOfFiles_parseSecondXML) {
 	fail_unless(strcmp(remoteListOfFiles->paths[1429], "wireless-regdb-2011.04.28.tar.bz9")==0);
 	fail_unless(strcmp(remoteListOfFiles->md5s[1429], "16b7fabd4d7761ccf206702a3f18cce9")==0);
 	
-	delete remoteListOfFiles_amazonCredentials;
-	delete remoteListOfFiles;
+	// delete remoteListOfFiles_amazonCredentials;
+	// delete remoteListOfFiles;
 } END_TEST
 
 START_TEST(RemoteListOfFiles_parseBrokenXML) {
@@ -198,6 +203,7 @@ Suite *RemoteListOfFilesSuite(void) {
 	suite_add_tcase(s, tc2);
 
 	TCase *tc3 = tcase_create("parseXML");
+	tcase_add_checked_fixture (tc3, RemoteListOfFiles_setup, RemoteListOfFiles_teardown);
 	tcase_add_test(tc3, RemoteListOfFiles_parseFirstXML);
 	tcase_add_test(tc3, RemoteListOfFiles_parseSecondXML);
 	suite_add_tcase(s, tc3);

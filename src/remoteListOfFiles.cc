@@ -92,8 +92,8 @@ void RemoteListOfFiles::add(char *path, char *md5) {
 }
 
 int RemoteListOfFiles::parseListOfFiles(char *body, uint64_t bodySize, uint8_t *isTruncated, char *lastKey, char *errorResult) {
-	strcpy(errorResult, "");
-	strcpy(lastKey, "");
+	*errorResult=0;
+	*lastKey=0;
 	*isTruncated=0;
 
 	xmlDocPtr doc;
@@ -140,11 +140,15 @@ int RemoteListOfFiles::parseListOfFiles(char *body, uint64_t bodySize, uint8_t *
 					md5 = RemoteListOfFiles::extractMd5FromEtag((char *)key);
 					xmlFree(key);
 				}
+
 				cur2 = cur2->next;
 			}
 
-			if (md5 && keyFound) {
+			if (md5!=NULL && keyFound) {
 				this->add(lastKey, md5);
+				free(md5);
+
+			} else if (md5!=NULL) {
 				free(md5);
 			}
 
@@ -158,7 +162,7 @@ int RemoteListOfFiles::parseListOfFiles(char *body, uint64_t bodySize, uint8_t *
 
 		cur = cur->next;
 	}
-	
+
 	xmlFreeDoc(doc);
 
 	return 1;
