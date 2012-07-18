@@ -149,7 +149,7 @@ CURLcode Uploader::uploadFile(
 		return UPLOAD_FILE_FUNCTION_FAILED;
 	}
 
-	char *date = getIsoDate(); 
+	char *date = getIsoDate();
 
   CURL *curl = curl_easy_init();
 	char *escapedRemotePath=curl_easy_escape(curl, remotePath, 0);
@@ -333,7 +333,7 @@ int Uploader::uploadFileWithRetry(
 		CURLcode res=this->uploadFile(localPath, remotePath, url, contentType, fileInfo, httpStatusCode, md5, errorResult);
 
 		if (*httpStatusCode==307) {
-			url = strdup(errorResult);
+			url = strdup(errorResult); 
 			cUploads=0;
 			printf("\n[Upload] Retrying %s: Amazon asked to reupload to: %s\n", remotePath, errorResult);
 			continue;
@@ -388,18 +388,22 @@ int Uploader::uploadFileWithRetryAndStore(
 
 	if (httpStatus==200) {
 		__block int toReturn=0;
+		if (strlen(remoteMd5)==32) {
 
-    dispatch_sync(sqlQueue, ^{
-			int sqlRes = fileListStorage->store(remotePath, remoteMd5, (uint32_t) fileInfo->st_mtime);
-			if (sqlRes==STORAGE_SUCCESS) {
-//		printf("\n[Upload] %s: Uploaded successfully, md5=%s\n", remotePath, remoteMd5);
-		
-				toReturn = UPLOAD_SUCCESS;
-			} else {
-				sprintf(errorResult, "Oops, database error");
-				toReturn = UPLOAD_FAILED;
-			}
-		});
+	    dispatch_sync(sqlQueue, ^{
+				int sqlRes = fileListStorage->store(remotePath, remoteMd5, (uint32_t) fileInfo->st_mtime);
+				if (sqlRes==STORAGE_SUCCESS) {
+	//			printf("\n[Upload] %s: Uploaded successfully, md5=%s\n", remotePath, remoteMd5);
+					toReturn = UPLOAD_SUCCESS;
+				} else {
+					sprintf(errorResult, "Oops, database error");
+					toReturn = UPLOAD_FAILED;
+				}
+			});
+		} else { 
+			sprintf(errorResult, "Amazon did not return MD5");
+			toReturn = UPLOAD_FAILED;
+		}
 		
 		free(remoteMd5);
 		return toReturn;
