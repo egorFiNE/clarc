@@ -59,8 +59,11 @@ START_TEST(RemoteListOfFiles_extractMd5FromEtag) {
 START_TEST(RemoteListOfFiles_extractMtimeFromHeaders) {
 	fail_unless(RemoteListOfFiles::extractMtimeFromHeaders("x-amz-meta-mtime: 1342552434")==1342552434);
 	fail_unless(RemoteListOfFiles::extractMtimeFromHeaders("\nsdfsdf: 234\nx-amz-meta-mtime: 1342552434\n")==1342552434);
+	fail_unless(RemoteListOfFiles::extractMtimeFromHeaders("\nsdfsdf: 234\r\nx-amz-meta-mtime: 1342552434\r\n")==1342552434);
 	fail_unless(RemoteListOfFiles::extractMtimeFromHeaders("\nsdfsdf: 234\nx-amz-meta-mtime: 3\nsirko: vasya\n")==3);
+	fail_unless(RemoteListOfFiles::extractMtimeFromHeaders("\nsdfsdf: 234\r\nx-amz-meta-mtime: 3\r\nsirko: vasya\r\n")==3);
 	fail_unless(RemoteListOfFiles::extractMtimeFromHeaders("\nsdfsdf: 234\nx-amz-meta-mtime: ")==0);
+	fail_unless(RemoteListOfFiles::extractMtimeFromHeaders("\nsdfsdf: 234\nx-amz-meta-mtime: \r\n")==0);
 	fail_unless(RemoteListOfFiles::extractMtimeFromHeaders("\nsdfsdf: 234\nx-amz-nothing: nothing")==0);
 	fail_unless(RemoteListOfFiles::extractMtimeFromHeaders("")==0);
 	fail_unless(RemoteListOfFiles::extractMtimeFromHeaders(NULL)==0);

@@ -85,6 +85,9 @@ START_TEST(Upload_extractLocationFromHeaders) {
 
 	Uploader::extractLocationFromHeaders("vasya\nLocation: sirko\nsdfsdfsdf\n", locationResult);
 	fail_unless(strcmp(locationResult, "sirko")==0);
+
+	Uploader::extractLocationFromHeaders("vasya\r\nLocation: sirko\r\nsdfsdfsdf\r\n", locationResult);
+	fail_unless(strcmp(locationResult, "sirko")==0);
 } END_TEST
 
 Suite *UploadSuite(void) {
