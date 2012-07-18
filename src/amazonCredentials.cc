@@ -38,7 +38,7 @@ char *AmazonCredentials::generateUrl(char *remotePath) {
 	}
 
 	char *resultUrl = (char *) malloc(strlen(this->bucket) + strlen(this->endPoint) + strlen(remotePathToUse) + 16);
-	resultUrl[0]=0;
+	resultUrl[0]=0; // FIXME use ssl
   sprintf(resultUrl, "http://%s.%s/%s", this->bucket, this->endPoint, remotePathToUse);
   return resultUrl;
 }
