@@ -34,19 +34,22 @@ void AmazonCredentials_teardown(void) {
 START_TEST(AmazonCredentials_generateUrl) {
 	char *path;
 
-	path = amazonCredentials->generateUrl("wow.html");
+	path = amazonCredentials->generateUrl("wow.html", 0);
 	fail_if(strcmp(path, "http://bucket.end-point/wow.html") != 0, NULL);
 
-	path = amazonCredentials->generateUrl("/wow.html");
+	path = amazonCredentials->generateUrl("wow.html", 1);
+	fail_if(strcmp(path, "https://bucket.end-point/wow.html") != 0, NULL);
+
+	path = amazonCredentials->generateUrl("/wow.html", 0);
 	fail_if(strcmp(path, "http://bucket.end-point/wow.html") != 0, NULL);
 
-	path = amazonCredentials->generateUrl("/");
+	path = amazonCredentials->generateUrl("/", 0);
 	fail_if(strcmp(path, "http://bucket.end-point/") != 0, NULL);
 
-	path = amazonCredentials->generateUrl("");
+	path = amazonCredentials->generateUrl("", 0);
 	fail_if(strcmp(path, "http://bucket.end-point/") != 0, NULL);
 
-	path = amazonCredentials->generateUrl(NULL);
+	path = amazonCredentials->generateUrl(NULL, 0);
 	fail_if(path!=NULL, NULL);
 } END_TEST
 

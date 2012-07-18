@@ -27,7 +27,7 @@ AmazonCredentials::~AmazonCredentials() {
 	free(this->endPoint);
 }
 
-char *AmazonCredentials::generateUrl(char *remotePath) {
+char *AmazonCredentials::generateUrl(char *remotePath, int useSsl) {
 	if (remotePath==NULL) {
 		return NULL;
 	}
@@ -37,9 +37,9 @@ char *AmazonCredentials::generateUrl(char *remotePath) {
 		remotePathToUse++;
 	}
 
-	char *resultUrl = (char *) malloc(strlen(this->bucket) + strlen(this->endPoint) + strlen(remotePathToUse) + 16);
-	resultUrl[0]=0; // FIXME use ssl
-  sprintf(resultUrl, "http://%s.%s/%s", this->bucket, this->endPoint, remotePathToUse);
+	char *resultUrl = (char *) malloc(strlen(this->bucket) + strlen(this->endPoint) + strlen(remotePathToUse) + 32);
+	resultUrl[0]=0; 
+  sprintf(resultUrl, "%s://%s.%s/%s", useSsl?"https":"http", this->bucket, this->endPoint, remotePathToUse);
   return resultUrl;
 }
 

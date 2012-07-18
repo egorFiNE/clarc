@@ -212,7 +212,7 @@ CURLcode Uploader::uploadFile(
 	if (url) {
 		postUrl = strdup(url);
 	} else { 
-	  postUrl = amazonCredentials->generateUrl(escapedRemotePath); 
+	  postUrl = amazonCredentials->generateUrl(escapedRemotePath, 1); 
 	}
 	free(escapedRemotePath);
 

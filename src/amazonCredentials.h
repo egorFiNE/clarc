@@ -18,7 +18,7 @@ public:
 	AmazonCredentials(char *accessKeyId, char *secretAccessKey, char *bucket, char *endPoint);
 	~AmazonCredentials();
 
-	char *generateUrl(char *remotePath);
+	char *generateUrl(char *remotePath, int useSsl);
 	char *createAuthorizationHeader(char *stringToSign);
 
 	char *accessKeyId;

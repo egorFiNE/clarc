@@ -188,7 +188,7 @@ int RemoteListOfFiles::performGetOnBucket(char *marker, int setLocationHeader, c
 		return LIST_FAILED;
 	}
 
-  char *url = amazonCredentials->generateUrl((char *) "");
+  char *url = amazonCredentials->generateUrl((char *) "", 1);
   if (marker && strlen(marker) > 0) {
   	strcat(url, "?marker=");
   	strcat(url, marker);
@@ -334,7 +334,7 @@ int RemoteListOfFiles::performHeadOnFile(char *remotePath, uint32_t *remoteMtime
 		return HEAD_FAILED;
 	}
 
-  char *url = amazonCredentials->generateUrl(escapedRemotePath); 
+  char *url = amazonCredentials->generateUrl(escapedRemotePath, 1); 
 
   struct CurlResponse curlResponse;
   CurlResponseInit(&curlResponse);
