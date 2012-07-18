@@ -90,16 +90,22 @@ void Uploader::extractLocationFromHeaders(char *headers, char *locationResult) {
 	}
   char *locationPointer = strstr(headers, "Location: ");
   if (locationPointer) {
-    char *endPointer = strchr(locationPointer, '\n');
-    if (!endPointer) {
-    	endPointer = (locationPointer + strlen(locationPointer));
-    }
+  	locationPointer+=10;
+
+  	if (strlen(locationPointer)<=0) {
+  		return;
+  	}
+
+  	char *endPointer = locationPointer;
+  	while (*endPointer!=0 && *endPointer!='\n' && *endPointer!='\r') {
+  		endPointer++;
+  	}
+
     if (endPointer==locationPointer) {
     	return;
     }
-    int len = (endPointer - locationPointer);
-    strncpy(locationResult, (locationPointer+10), len-10);
-    *(locationResult+len-10)=0;
+
+    strncpy(locationResult, locationPointer, endPointer-locationPointer);
   }
 }
 
