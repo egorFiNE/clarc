@@ -54,13 +54,19 @@ static char *endPoints[] = {
 	(char *) "s3-eu-west-1.amazonaws.com",
 	(char *) "s3-ap-southeast-1.amazonaws.com",
 	(char *) "s3-ap-northeast-1.amazonaws.com",
-	(char *) "s3-sa-east-1.amazonaws.com"
+	(char *) "s3-sa-east-1.amazonaws.com",
+
+#ifdef TEST
+	(char *) "test.dev",
+#endif
+	
+	NULL
 };
 
 int validateEndpoint(char *endPoint) {
 	int i=0;
 	while (char *e=endPoints[i++]) {
-		if (strcmp(e, endPoint)==0) {
+		if (e && strcmp(e, endPoint)==0) {
 			return 1;
 		}
 	}
