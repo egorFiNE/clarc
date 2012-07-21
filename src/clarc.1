@@ -99,9 +99,23 @@ This option must not specify file name.
 .TP
 \fB\-\-dbFilename <filename>
 File name for the database. Default: '.files.sqlite3'.
+.SH NETWORK OPTIONS
+.PP
+.TP
+\fB\-\-uploadThreads <int>
+Count of threads to spawn for upload. Default: 10.
+.TP
+\fB\-\-connectTimeout <seconds>
+Timeout for connect operation only, in seconds. Default: 15.
+.TP
+\fB\-\-networkTimeout <seconds>
+How many seconds to wait till the stalled connection should be killed. Default: 15.
 .SH MISC OPTIONS
 .PP
 .TP
+\fB\-\-dryRun
+Do not actually upload files; do not actually rebuild database. 
+.TP 
 \fB\-\-version
 .TP
 \fB\-\-help

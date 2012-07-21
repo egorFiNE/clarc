@@ -37,7 +37,10 @@ OPTIONS:
     --logLevel <int>    Set stdout log level from 1 (only fatals) to 5 (debug).
                         Default is 2 (fatals and errors).
 
-    --dryRun                Do not actually upload
+    --uploadThreads <int>   Count of threads to spawn for upload. Default: 10.
+    --connectTimeout <sec>  Timeout for connect operation only. Default: 15.
+    --networkTimeout <sec>  How many seconds to wait till the stalled connection
+                            should be killed. Default: 15.
 
     --dbPath <path>         Absolute path to local database file instead
                             of the default path; by default it's the source 
@@ -45,6 +48,9 @@ OPTIONS:
                             file name.
     --dbFilename <string>   File name for the database;
                             by default it's '.files.sqlite3'
+
+    --dryRun                Do not actually upload files; do not actually
+                            rebuild database.
 
     --version               Ask for version number
     --help                  Ask for something useful
