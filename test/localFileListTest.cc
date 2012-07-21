@@ -43,18 +43,33 @@ START_TEST(LocalFileList_addFiles) {
 } END_TEST
 
 
+int findInArray(char **entries, int countOfEntries, char *search) {
+	for (int i=0;i<countOfEntries;i++) {
+		if (strcmp(entries[i], search)==0) {
+			return i;
+		}
+	}
+	return -1;
+}
+
 START_TEST(LocalFileList_recurseIn) {
 	localFileList->recurseIn("", "./data/recurse-in-test");
 	fail_unless(localFileList->count==4);
 	fail_unless(localFileList->calculateTotalSize()==17);
-	fail_unless(strcmp(localFileList->paths[0], "/123")==0);
-	fail_unless(localFileList->sizes[0]==4);
-	fail_unless(strcmp(localFileList->paths[1], "/1234")==0);
-	fail_unless(localFileList->sizes[1]==5);
+
+	int pos = findInArray(localFileList->paths, localFileList->count, "/123");
+	fail_if(pos==-1);
+	fail_unless(localFileList->sizes[pos]==4);
+
+	pos = findInArray(localFileList->paths, localFileList->count, "/1234");
+	fail_if(pos==-1);
+	fail_unless(localFileList->sizes[pos]==5);
 } END_TEST
 
 START_TEST(LocalFileList_recurseInEmpty) {
-	localFileList->recurseIn("", "./data/recurse-in-test-empty");
+	char *dir = "./data/recurse-in-test-empty";
+	mkdir(dir, 0755);
+	localFileList->recurseIn("", dir);
 	fail_unless(localFileList->count==0);
 	fail_unless(localFileList->calculateTotalSize()==0);
 } END_TEST
