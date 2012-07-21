@@ -12,6 +12,7 @@ extern "C" {
 #include <sqlite3.h>
 #include <getopt.h>
 #include "help.h"
+#include <libxml/xmlmemory.h>
 }
 
 #include "localFileList.h"
@@ -268,10 +269,11 @@ int verifySource(char *source) {
 int main(int argc, char *argv[]) {
 	int res;
   curl_global_init(CURL_GLOBAL_ALL);
+  xmlInitParser();
 
-  if (!parseCommandline(argc, argv)) {
 	excludeFilePattern = new FilePattern();
 
+  if (!parseCommandline(argc, argv)) {
   	exit(1);
   }
 
