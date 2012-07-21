@@ -77,6 +77,9 @@ Uploader::Uploader(AmazonCredentials *amazonCredentials, FilePattern *excludeFil
 	this->makeAllPublic = 0;
 	this->useSsl = 1;
 	this->dryRun = 0;
+	this->connectTimeout = CONNECT_TIMEOUT;
+	this->networkTimeout = LOW_SPEED_TIME;
+	this->uploadThreads = UPLOAD_THREADS;
 
 	this->systemQueryQueue = dispatch_queue_create("com.egorfine.systemquery", NULL);
 }
@@ -254,9 +257,9 @@ CURLcode Uploader::uploadFile(
   curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
   curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
 
-	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, CONNECT_TIMEOUT);
+	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, this->connectTimeout);
 	curl_easy_setopt(curl, CURLOPT_MAXCONNECTS, MAXCONNECTS);
-	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, LOW_SPEED_TIME);
+	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->networkTimeout);
 	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, LOW_SPEED_LIMIT);
 
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&curlResponse);
@@ -439,7 +442,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 	dispatch_queue_t sqlQueue = dispatch_queue_create("com.egorfine.db", NULL);
 	dispatch_group_t group = dispatch_group_create();
 	
-	dispatch_semaphore_t threadsCount = dispatch_semaphore_create(20);
+	dispatch_semaphore_t threadsCount = dispatch_semaphore_create(this->uploadThreads);
 
 	__block int failed=0;
 

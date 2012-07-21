@@ -9,6 +9,8 @@
 #define RETRY_SLEEP_TIME 5 // second, sleep time increment between failed retries to upload
 #define RETRY_FAIL_AFTER 3 // how many tries to perform on failed upload
 
+#define UPLOAD_THREADS 10
+
 // I need to use curl error reporting for internal failures of upload functions
 #define UPLOAD_FILE_FUNCTION_FAILED CURLE_OBSOLETE44
 

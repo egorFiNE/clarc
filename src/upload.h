@@ -65,6 +65,9 @@ public:
 	int makeAllPublic;
 	int useSsl;
 	int dryRun;
+	int connectTimeout;
+	int networkTimeout;
+	int uploadThreads;
 
 	void progress(char *path, double uploadedBytes, double ulnow, double ultotal);
 	int uploadFiles(FileListStorage *fileListStorage, char *prefix);

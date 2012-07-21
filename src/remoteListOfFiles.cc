@@ -33,6 +33,8 @@ RemoteListOfFiles::RemoteListOfFiles(AmazonCredentials *amazonCredentials) {
 
 	this->showProgress=0;
 	this->useSsl=1;
+	this->connectTimeout = CONNECT_TIMEOUT;
+	this->networkTimeout = LOW_SPEED_TIME;
 }
 
 RemoteListOfFiles::~RemoteListOfFiles() {
@@ -224,9 +226,9 @@ int RemoteListOfFiles::performGetOnBucket(char *marker, int setLocationHeader, c
   curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
   curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
   
-	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, CONNECT_TIMEOUT);
+	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, this->connectTimeout);
 	curl_easy_setopt(curl, CURLOPT_MAXCONNECTS, MAXCONNECTS);
-	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, LOW_SPEED_TIME);
+	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->networkTimeout);
 	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, LOW_SPEED_LIMIT);
 
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&curlResponse);
@@ -365,9 +367,9 @@ int RemoteListOfFiles::performHeadOnFile(char *remotePath, uint32_t *remoteMtime
   curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
   curl_easy_setopt(curl, CURLOPT_NOBODY, 1);
   
-	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, CONNECT_TIMEOUT);
+	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, this->connectTimeout);
 	curl_easy_setopt(curl, CURLOPT_MAXCONNECTS, MAXCONNECTS);
-	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, LOW_SPEED_TIME);
+	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->networkTimeout);
 	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, LOW_SPEED_LIMIT);
 
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&curlResponse);

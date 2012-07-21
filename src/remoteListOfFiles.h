@@ -40,6 +40,8 @@ public:
 	uint32_t count;
 	int showProgress;
 	int useSsl;
+	int connectTimeout;
+	int networkTimeout;
 };
 
 #define LIST_FAILED 0

@@ -25,7 +25,8 @@ extern "C" {
 
 static char *accessKeyId=NULL, *secretAccessKey=NULL, *bucket=NULL, *endPoint = (char *) "s3.amazonaws.com",
 	*source=NULL, *databasePath=NULL, *databaseFilename= (char *)".files.sqlite3";
-static int performRebuild=0, performUpload=0, makeAllPublic=0, useRrs=0, showProgress=0, skipSsl=0, dryRun=0;
+static int performRebuild=0, performUpload=0, makeAllPublic=0, useRrs=0, showProgress=0, skipSsl=0, dryRun=0,
+  connectTimeout = 0, networkTimeout = 0, uploadThreads = 0;
 
 FilePattern *excludeFilePattern;
 
@@ -124,6 +125,10 @@ int parseCommandline(int argc, char *argv[]) {
     { "rss",               no_argument,        NULL,  0 }, // common typo
     { "skipSsl",           no_argument,        NULL,  0 },
 
+    { "connectTimeout",    required_argument,  NULL,  0 },
+    { "networkTimeout",    required_argument,  NULL,  0 },
+    { "uploadThreads",     required_argument,  NULL,  0 },
+
     { "source",            required_argument,  NULL,  0 },
     { "ddbPath",           required_argument,  NULL,  0 },
     { "dbFilename",        required_argument,  NULL,  0 },
@@ -172,6 +177,27 @@ int parseCommandline(int argc, char *argv[]) {
 
   	} else if (strcmp(longName, "endPoint")==0) {
   		endPoint = strdup(optarg);
+
+    } else if (strcmp(longName, "networkTimeout")==0) {
+      networkTimeout = atoi(optarg);
+      if (networkTimeout<=0 || networkTimeout>=600) {
+        printf("Network timeout invalid (must be 1..600 seconds)\n");
+        exit(1);
+      }
+
+    } else if (strcmp(longName, "uploadThreads")==0) {
+      uploadThreads = atoi(optarg);
+      if (uploadThreads<=0 || uploadThreads>=100) {
+        printf("Upload threads count invalid (must be 1..100)\n");
+        exit(1);
+      }
+
+    } else if (strcmp(longName, "connectTimeout")==0) {
+      connectTimeout = atoi(optarg);
+      if (connectTimeout<=0 || connectTimeout>=600) {
+        printf("Connect timeout invalid (must be 1..600 seconds)\n");
+        exit(1);
+      }
 
   	} else if (strcmp(longName, "public")==0) {
   		makeAllPublic = 1;
@@ -326,6 +352,12 @@ int main(int argc, char *argv[]) {
   if (skipSsl) {
     remoteListOfFiles->useSsl=0;
   }
+  if (networkTimeout) {
+    remoteListOfFiles->networkTimeout = networkTimeout;
+  }
+  if (connectTimeout) {
+    remoteListOfFiles->connectTimeout = connectTimeout;
+  }
 
 	res = remoteListOfFiles->checkAuth();
 	if (res == AUTH_FAILED_BUCKET_DOESNT_EXISTS) {
@@ -365,6 +397,15 @@ int main(int argc, char *argv[]) {
     uploader->showProgress = showProgress;
     if (skipSsl) {
       uploader->useSsl=0;
+    }
+    if (networkTimeout) {
+      uploader->networkTimeout = networkTimeout;
+    }
+    if (connectTimeout) {
+      uploader->connectTimeout = connectTimeout;
+    }
+    if (uploadThreads) {
+      uploader->uploadThreads = uploadThreads;
     }
     uploader->dryRun = dryRun;
 
