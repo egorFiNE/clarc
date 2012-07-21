@@ -526,7 +526,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 		}
 	}
 
-	LOG(LOG_INFO, "[Upload] Finished", "");
+	LOG(LOG_INFO, "[Upload] Finished %s", failed ? "with errors" : "successfully");
 
 	delete files;
 
