@@ -26,12 +26,18 @@ Actually upload files to Amazon S3.
 .TP
 \fB\-\-rebuild\fR
 Download files list and meta information from Amazon S3 and rebuild local database from scratch.
-.SH MAIN OPTIONS
+.SH PATH OPTIONS
 .PP
 .TP
 \fB\-\-source <path> 
 .B (*)
 Absolute path to folder that is being uploaded. 
+.TP
+\fB\-\-exclude <pattern> 
+Ignore certain files/folders according to the Regular Expression pattern. There could be more than a single --exclude argument.
+.TP
+\fB\-\-excludeFromFile <path>
+The same as --exclude but will read a list of exclude patterns from file instead of the command-line argument. The patterns in file must be newline-separated.
 .SH AMAZON S3 OPTIONS
 .PP
 .TP
@@ -57,10 +63,29 @@ By default the Standard storage is used.
 .TP
 \fB\-\-public
 Make all files publically avaialble on S3. By default all files are only accessible by the Amazon S3 account owner.
+.SH DISPLAY OPTIONS
+.PP
+.TP
+\fB\-\-progress 
+Show progress indicator for meta update and uploads.
+.TP
+\fB\-\-logLevel <int>
+Set stdout log level. Possible values are: 
+.B 1: 
+only fatals;
+.B 2:
++errors;
+.B 3:
++warnings;
+.B 4:
++info;
+.B 5:
+debug.
+Default is 2 (fatals and errors). 
 .SH METADATA STORAGE OPTIONS
 .PP
 .TP
-\fB\-\-databasePath <path>
+\fB\-\-dbPath <path>
 Absolute path to local database file instead
 of the default path. by default it's stored 
 in the 
@@ -69,7 +94,7 @@ folder.
 .B WARNING: 
 This option must not specify file name. 
 .TP
-\fB\-\-databaseFilename <filename>
+\fB\-\-dbFilename <filename>
 File name for the database. Default: '.files.sqlite3'.
 .SH MISC OPTIONS
 .PP

@@ -17,7 +17,7 @@ CXXFLAGS=$(CXXFLAGS_BASIC) -D_DARWIN_FEATURE_64_BIT_INODE
 LDFLAGS=$(LDFLAGS_BASIC) -lz -lssl -lcrypto ../libsqlite3.a
 endif
 
-OBJS=../src/base64.o ../src/sha1.o ../src/hmac-sha1.o ../src/memxor.o ../src/curlResponse.o ../src/utils.o
+OBJS=../src/base64.o ../src/sha1.o ../src/hmac-sha1.o ../src/memxor.o ../src/curlResponse.o ../src/utils.o ../src/logger.o
 SOURCES=../src/localFileList.cc ../src/amazonCredentials.cc ../src/amzHeaders.cc ../src/fileListStorage.cc ../src/remoteListOfFiles.cc ../src/upload.cc ../src/filePattern.cc
 TESTS=./localFileListTest.cc ./amazonCredentialsTest.cc ./amzHeadersTest.cc ./fileListStorageTest.cc ./remoteListOfFilesTest.cc ./uploadTest.cc 
 all: test
@@ -26,4 +26,4 @@ clean:
 	rm -f test *.o
 
 test: $(OBJS) $(HEADERS) $(SOURCES) $(TESTS) ./test.cc
-	$(CXX) $(CFLAGS) -o test $(SOURCES) $(TESTS) ./test.cc $(OBJS) $(LDFLAGS)
+	$(CXX) $(CFLAGS) -o test $(SOURCES) $(TESTS) ./test.cc $(OBJS) $(LDFLAGS) && ./test 2>/dev/null

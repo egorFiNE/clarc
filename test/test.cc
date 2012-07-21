@@ -13,9 +13,15 @@ extern "C" {
 #include <getopt.h>
 #include <check.h>
 #include "test.h"
+#include "logger.h"
 }
 
+FILE *logStream;
+int logLevel = LOG_ERR;
+
 int main(int argc, char *argv[]) {
+	logStream = stdout;
+	logLevel = 4;
 	int number_failed;
 	SRunner *sr = srunner_create(LocalFileListSuite());
 	srunner_add_suite(sr, AmazonCredentialsSuite());

@@ -20,12 +20,12 @@ extern "C" {
 #include "curlResponse.h"
 #include <pwd.h>
 #include <grp.h>
-
+#include "logger.h"
+	
 // this is declared explicitly instead of including unistd.h because some
 // linux distributions have clang broken with it. Fortunately, sleep() is 
 // the same on all sane OS.
 unsigned int sleep(unsigned int seconds);
-
 }
 
 #include "localFileList.h"
@@ -72,7 +72,6 @@ Uploader::Uploader(AmazonCredentials *amazonCredentials, FilePattern *excludeFil
 	this->excludeFilePattern = excludeFilePattern;
 	this->totalSize=0;
 	this->uploadedSize=0;
-	this->showProgress=1;
 	this->lastProgressUpdate = 0;
 	this->useRrs = 0;
 	this->makeAllPublic = 0;
@@ -131,7 +130,6 @@ void Uploader::extractMD5FromETagHeaders(char *headers, char *md5) {
 		}
 	}
 }
-
 
 CURLcode Uploader::uploadFile(
 	char *localPath, 
@@ -206,7 +204,7 @@ CURLcode Uploader::uploadFile(
 		free(date);
 	  curl_easy_cleanup(curl);
 		free(escapedRemotePath);
-		strcpy(errorResult, "Error in auth.");
+		strcpy(errorResult, "Error in auth");
 		return UPLOAD_FILE_FUNCTION_FAILED;
 	}
 
@@ -337,7 +335,7 @@ int Uploader::uploadFileWithRetry(
 		if (*httpStatusCode==307) {
 			url = strdup(errorResult); 
 			cUploads=0;
-			printf("\n[Upload] Retrying %s: Amazon asked to reupload to: %s\n", remotePath, errorResult);
+			LOG(LOG_INFO, "[Upload] Retrying %s: Amazon asked to reupload to: %s", remotePath, errorResult);
 			continue;
 		}
 
@@ -349,7 +347,7 @@ int Uploader::uploadFileWithRetry(
 		}
 
 		if (HTTP_SHOULD_RETRY_ON(res)) {
-			printf("\n[Upload] Retrying %s (%d)\n", remotePath, res);
+			LOG(LOG_WARN, "[Upload] Retrying %s after a short sleep", remotePath);
 			int sleepTime = cUploads*RETRY_SLEEP_TIME; 
 			sleep(sleepTime);
 		} else { 
@@ -395,7 +393,6 @@ int Uploader::uploadFileWithRetryAndStore(
 	    dispatch_sync(sqlQueue, ^{
 				int sqlRes = fileListStorage->store(remotePath, remoteMd5, (uint32_t) fileInfo->st_mtime);
 				if (sqlRes==STORAGE_SUCCESS) {
-	//			printf("\n[Upload] %s: Uploaded successfully, md5=%s\n", remotePath, remoteMd5);
 					toReturn = UPLOAD_SUCCESS;
 				} else {
 					sprintf(errorResult, "Oops, database error");
@@ -433,7 +430,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 
 	this->totalSize =  files->calculateTotalSize();
 	char *hrSizeString = hrSize(this->totalSize);
-	printf("[Upload] Total size of files: %s\n", hrSizeString);
+	LOG(LOG_INFO, "[Upload] Total size of files: %s", hrSizeString);
 	free(hrSizeString);
 
 	dispatch_queue_t globalQueue = dispatch_get_global_queue(0, 0);
@@ -453,28 +450,21 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 		
 		__block struct stat fileInfo;
 		if (lstat(realLocalPath, &fileInfo)<0) {
-			printf("\n[Upload] FAIL %s: Cannot open file: %s\n", path, strerror(errno));
-			free(realLocalPath);
-			this->uploadedSize+=files->sizes[i];
-			continue;
-		}
-		
-		if (!(fileInfo.st_mode & S_IFREG)) {
-			printf("\n[Upload] FAIL %s: Path is not a regular file.\n", path);
+			LOG(LOG_ERR, "[Upload] FAIL %s: Cannot open file: %s", path, strerror(errno));
 			free(realLocalPath);
 			this->uploadedSize+=files->sizes[i];
 			continue;
 		}
 		
 		if (fileInfo.st_size==0) {
-			printf("\n[Upload] WARNING %s: Zero sized file, skipped.\n", path);
+			LOG(LOG_WARN, "[Upload] WARNING %s: Zero sized file, skipped", path);
 			free(realLocalPath);
 			this->uploadedSize+=files->sizes[i];
 			continue;
 		}
 		
 		if (fileInfo.st_size>=MAX_S3_FILE_SIZE) {
-			printf("\n[Upload] FAIL %s: File too large (%" PRIu64 " bytes while only %" PRIu64 " allowed), skipped\n", 
+			LOG(LOG_WARN, "[Upload] WARNING %s: File too large (%" PRIu64 " bytes while only %" PRIu64 " allowed), skipped", 
 				path, (uint64_t) fileInfo.st_size, (uint64_t) MAX_S3_FILE_SIZE);
 			free(realLocalPath);
 			this->uploadedSize+=files->sizes[i];
@@ -485,13 +475,13 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 		uint64_t mtime=0;
 		int res = fileListStorage->lookup(path, md5, &mtime);
 		if (res!=STORAGE_SUCCESS) {
-			printf("\n[Upload] FAIL %s: Oops, database query failed.\n", path);
+			LOG(LOG_FATAL, "[Upload] FAIL %s: Oops, database query failed", path);
 			free(realLocalPath);
 			return UPLOAD_FAILED;
 		}
 
 		if (res>0 && mtime == (uint64_t) fileInfo.st_mtime) {
-			//printf("\tNot changed.\n");
+			LOG(LOG_INFO, "[Upload] %s not changed", path);
 			this->uploadedSize+=files->sizes[i];
 			free(realLocalPath);
 			continue;
@@ -512,8 +502,10 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 					errorResult
 				);
 				if (res==UPLOAD_FAILED) {
-					printf("\n[Upload] FAIL %s: %s\n", path, errorResult);
+					LOG(LOG_FATAL, "[Upload] FAIL %s: %s", path, errorResult);
 					failed=1;
+				} else {
+					LOG(LOG_INFO, "[Upload] Uploaded %s", path);
 				}
 			}
 			
@@ -528,7 +520,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 	}
 
 	dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
-	printf("\n[Upload] Finished.\n");
+	LOG(LOG_INFO, "[Upload] Finished", "");
 
 	delete files;
 
@@ -538,7 +530,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 int Uploader::uploadDatabase(char *databasePath, char *databaseFilename) { 
 	struct stat fileInfo;
 	if (lstat(databasePath, &fileInfo)<0) {
-		printf("[Upload] Oops database upload failed: file %s doesn't exists\n", databaseFilename);
+		LOG(LOG_FATAL, "[Upload] Oops database upload failed: file %s doesn't exists", databaseFilename);
 		return UPLOAD_FAILED;
 	}
 
@@ -552,13 +544,13 @@ int Uploader::uploadDatabase(char *databasePath, char *databaseFilename) {
 		(char *)"application/octet-stream", &fileInfo, &httpStatusCode, md5, errorResult);
 
 	if (res==UPLOAD_SUCCESS && httpStatusCode!=200) {
-		printf("[Upload] Database upload failed with HTTP status %d\n", httpStatusCode);
+		LOG(LOG_ERR, "[Upload] Database upload failed with HTTP status %d", httpStatusCode);
 
 	} if (res==UPLOAD_SUCCESS && httpStatusCode==200) {
-		printf("[Upload] Database uploaded.\n");
+		LOG(LOG_INFO, "[Upload] Database uploaded");
 
 	} else { 
-		printf("[Upload] Database upload failed: %s.\n", errorResult);
+		LOG(LOG_ERR, "[Upload] Database upload failed: %s", errorResult);
 	}
 
 	return res;

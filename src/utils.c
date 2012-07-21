@@ -59,6 +59,7 @@ char *guessContentType(char *filename) {
 		result = (char *)"image/bmp";
 	} else if (strcmp(lowcaseExtension, "tif")==0 || strcmp(lowcaseExtension, "tiff")==0) {
 		result = (char *)"image/tif";
+
 	} else if (strcmp(lowcaseExtension, "css")==0) {
 		result = (char *)"text/css";
 	} else if (strcmp(lowcaseExtension, "js")==0) {
@@ -71,20 +72,24 @@ char *guessContentType(char *filename) {
 		result = (char *)"text/html";
 	} else if (strcmp(lowcaseExtension, "txt")==0) {
 		result = (char *)"text/plain";
+
 	} else if (strcmp(lowcaseExtension, "gz")==0) {
 		result = (char *)"application/x-gzip";
 	} else if (strcmp(lowcaseExtension, "bzip2")==0) {
 		result = (char *)"application/x-bzip2";
 	} else if (strcmp(lowcaseExtension, "tar")==0) {
 		result = (char *)"application/x-tar";
+	} else if (strcmp(lowcaseExtension, "zip")==0) {
+		result = (char *)"application/zip";
+		
 	} else if (strcmp(lowcaseExtension, "pdf")==0) {
 		result = (char *)"application/pdf";
+
 	} else if (strcmp(lowcaseExtension, "jad")==0) {
 		result = (char *)"text/vnd.sun.j2me.app-descriptor";
 	} else if (strcmp(lowcaseExtension, "jar")==0) {
 		result = (char *)"application/java-archive";
-	} else if (strcmp(lowcaseExtension, "zip")==0) {
-		result = (char *)"application/zip";
+
 	} else { 
 		result = (char *)"application/octet-stream";
 	}

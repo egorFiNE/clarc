@@ -38,6 +38,7 @@ public:
 	char **md5s;
 	uint32_t *mtimes;
 	uint32_t count;
+	int showProgress;
 };
 
 #define LIST_FAILED 0

@@ -12,6 +12,10 @@ using namespace std;
 #include "localFileList.h"
 #include "filePattern.h"
 
+extern "C" {
+#include "logger.h"
+}
+
 LocalFileList::LocalFileList(FilePattern *excludeFilePattern) {
 	this->paths = (char **) malloc(sizeof(char *) * 100);
 	this->sizes = (uint64_t *) malloc(sizeof(uint64_t) * 100);
@@ -33,7 +37,7 @@ LocalFileList::~LocalFileList() {
 
 void LocalFileList::add(char *path, uint64_t size) {
 	if (this->excludeFilePattern && this->excludeFilePattern->matches(path)) {
-		printf("[File List] Excluded %s\n", path);
+		LOG(LOG_DBG, "[File List] Excluded %s", path);
 		return;
 	}
 
@@ -68,7 +72,7 @@ void LocalFileList::recurseIn(char *path, char *prefix) {
 
 			struct stat fileInfo;
 			if (lstat(statName, &fileInfo)<0) {
-				printf("[File List] WARNING: cannot stat file: %s\n", statName);
+				LOG(LOG_WARN, "[File List] WARNING: cannot stat file: %s", statName);
 			} else {
 				this->add(fullName, (uint64_t) fileInfo.st_size);
 			}

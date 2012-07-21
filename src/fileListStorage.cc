@@ -169,8 +169,6 @@ int FileListStorage::storeRemoteListOfFiles(RemoteListOfFiles *remoteListOfFiles
 
 		sqlite3_clear_bindings(stmt);
 		sqlite3_reset(stmt);
-
-		//printf("'%s' %u %s\n", remoteListOfFiles->md5s[i], remoteListOfFiles->mtimes[i], remoteListOfFiles->paths[i]);
 	}
 
 	if (sqlite3_exec(this->sqlite, "END TRANSACTION", NULL, NULL, &sErrMsg) != SQLITE_OK) {

@@ -11,8 +11,9 @@ extern "C" {
 #include <errno.h>
 #include <sqlite3.h>
 #include <getopt.h>
-#include "help.h"
 #include <libxml/xmlmemory.h>
+#include "help.h"
+#include "logger.h"
 }
 
 #include "localFileList.h"
@@ -22,12 +23,15 @@ extern "C" {
 #include "upload.h"
 #include "filePattern.h"
 
-
 static char *accessKeyId=NULL, *secretAccessKey=NULL, *bucket=NULL, *endPoint = (char *) "s3.amazonaws.com",
 	*source=NULL, *databasePath=NULL, *databaseFilename= (char *)".files.sqlite3";
-static int performRebuild=0, performUpload=0, makeAllPublic=0, useRrs=0;
+static int performRebuild=0, performUpload=0, makeAllPublic=0, useRrs=0, showProgress=0;
 
 FilePattern *excludeFilePattern;
+
+FILE *logStream;
+int logLevel = LOG_ERR;
+
 
 int rebuildDatabase(RemoteListOfFiles *remoteListOfFiles, AmazonCredentials *amazonCredentials, FileListStorage *fileListStorage) {
 	int res = remoteListOfFiles->downloadList();
@@ -35,7 +39,7 @@ int rebuildDatabase(RemoteListOfFiles *remoteListOfFiles, AmazonCredentials *ama
 		return LIST_FAILED;
 	}
 
-	printf("[MetaUpdate] Got %d files, updating meta information\n", remoteListOfFiles->count);
+  LOG(LOG_INFO, "[MetaUpdate] Got %d files, updating meta information", remoteListOfFiles->count);
 
 	res = remoteListOfFiles->resolveMtimes();
 	if (res==LIST_FAILED) { 
@@ -43,7 +47,7 @@ int rebuildDatabase(RemoteListOfFiles *remoteListOfFiles, AmazonCredentials *ama
 	}
 
 	if (fileListStorage->storeRemoteListOfFiles(remoteListOfFiles) == STORAGE_FAILED) {
-		printf("[MetaUpdate] Failed to store list of files\n");
+    LOG(LOG_FATAL, "[MetaUpdate] Failed to store list of files");
 		return LIST_FAILED;
 	} else { 
 		return LIST_SUCCESS;
@@ -115,11 +119,14 @@ int parseCommandline(int argc, char *argv[]) {
     { "rss",               no_argument,        NULL,  0 }, // common typo
 
     { "source",            required_argument,  NULL,  0 },
-    { "databasePath",      required_argument,  NULL,  0 },
-    { "databaseFilename",  required_argument,  NULL,  0 },
+    { "ddbPath",           required_argument,  NULL,  0 },
+    { "dbFilename",        required_argument,  NULL,  0 },
 
     { "exclude",           required_argument,  NULL,  0 },
     { "excludeFromFile",   required_argument,  NULL,  0 },
+
+    { "progress",          no_argument,        NULL,  0 },
+    { "logLevel",          required_argument,  NULL,  0 },
 
     { "rebuild",           no_argument,        NULL,  0 },
     { "upload",            no_argument,        NULL,  0 },
@@ -168,13 +175,23 @@ int parseCommandline(int argc, char *argv[]) {
   		printf("Warning: you spelled --rss; you meant -rrs which stands for Reduced Redundancy Storage.\n");
   		useRrs = 1;
 
+    } else if (strcmp(longName, "progress")==0) {
+      showProgress = 1;
+
+    } else if (strcmp(longName, "logLevel")==0) {
+      logLevel = atoi(optarg);
+      if (logLevel <= 0 || logLevel > 5) {
+        printf("--logLevel must be 1..5\n");
+        exit(1);
+      }
+
   	} else if (strcmp(longName, "source")==0) {
   		source = strdup(optarg);
 
-  	} else if (strcmp(longName, "databasePath")==0) {
+  	} else if (strcmp(longName, "dbPath")==0) {
   		databasePath = strdup(optarg);
 
-  	} else if (strcmp(longName, "databaseFilename")==0) {
+  	} else if (strcmp(longName, "dbFilename")==0) {
   		databaseFilename = strdup(optarg);
 
   	} else if (strcmp(longName, "rebuild")==0) {
@@ -271,6 +288,9 @@ int main(int argc, char *argv[]) {
   curl_global_init(CURL_GLOBAL_ALL);
   xmlInitParser();
 
+  logStream = stdout;
+  logLevel = LOG_DBG;
+
 	excludeFilePattern = new FilePattern();
 
   if (!parseCommandline(argc, argv)) {
@@ -288,24 +308,25 @@ int main(int argc, char *argv[]) {
   );
 
 	RemoteListOfFiles *remoteListOfFiles = new RemoteListOfFiles(amazonCredentials);
+  remoteListOfFiles->showProgress = showProgress;
 
 	res = remoteListOfFiles->checkAuth();
 	if (res == AUTH_FAILED_BUCKET_DOESNT_EXISTS) {
-		printf("[Auth] Failed: bucket doesn't exists.\n");
+    LOG(LOG_FATAL, "[Auth] Failed: bucket doesn't exists, exit");
 		exit(1);		
 	} else if (res == AUTH_FAILED) {
-		printf("[Auth] FAIL, exit.\n");
+		LOG(LOG_FATAL, "[Auth] FAIL, exit");
 		exit(1);		
 	}
-	printf("[Auth] Success.\n");
+  LOG(LOG_INFO, "[Auth] Success");
 
 	char *databaseFilePath = buildDatabaseFilePath(databaseFilename, databasePath);
-	printf("[Storage] Database path = %s\n", databaseFilePath);
+	LOG(LOG_DBG, "[Storage] Database path = %s", databaseFilePath);
 
 	char errorResult[1024*100];
 	FileListStorage *fileListStorage = new FileListStorage(databaseFilePath, errorResult);
 	if (strlen(errorResult)>0) {
-		printf("[Storage] FAIL: %s\n", errorResult);
+		LOG(LOG_FATAL, "[Storage] FAIL: %s, exit", errorResult);
 		exit(1);
 	}
 
@@ -324,6 +345,7 @@ int main(int argc, char *argv[]) {
 		Uploader *uploader = new Uploader(amazonCredentials, excludeFilePattern);
 		uploader->useRrs = useRrs;
 		uploader->makeAllPublic = makeAllPublic;
+    uploader->showProgress = showProgress;
 
 		res = uploader->uploadFiles(fileListStorage, source);
 

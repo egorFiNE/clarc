@@ -1,4 +1,5 @@
 #include "curlResponse.h"
+#include "logger.h"
 #include <string.h>
 
 void CurlResponseInit(struct CurlResponse *curlResponse) {
@@ -18,8 +19,7 @@ size_t CurlResponseHeadersCallback(void *contents, size_t size, size_t nmemb, st
 	size_t realsize = size * nmemb;
   curlResponse->headers = (char *) realloc(curlResponse->headers, curlResponse->headersSize + realsize + 1);
   if (curlResponse->headers == NULL) {
-    /* out of memory! */
-    printf("not enough memory (realloc returned NULL)\n");
+    LOG(LOG_FATAL, "[curl] Out of memory");
     exit(1);
   }
 
@@ -35,8 +35,7 @@ size_t CurlResponseBodyCallback(void *contents, size_t size, size_t nmemb, struc
 
   curlResponse->body = (char *) realloc(curlResponse->body, curlResponse->bodySize + realsize + 1);
   if (curlResponse->body == NULL) {
-    /* out of memory! */
-    printf("not enough memory (realloc returned NULL)\n");
+    LOG(LOG_FATAL, "[curl] Out of memory");
     exit(1);
   }
 

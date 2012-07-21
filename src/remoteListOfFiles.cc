@@ -16,6 +16,7 @@ extern "C" {
 #include "utils.h"
 #include "base64.h"
 #include "curlResponse.h"
+#include "logger.h"
 }
 
 #include "remoteListOfFiles.h"
@@ -28,8 +29,9 @@ RemoteListOfFiles::RemoteListOfFiles(AmazonCredentials *amazonCredentials) {
 	this->md5s = (char **) malloc(sizeof(char *) * 100);
 	this->mtimes = (uint32_t *) malloc(sizeof(uint32_t) * 100);
 	this->count = 0;
-
 	this->allocCount = 100;
+
+	this->showProgress=0;
 }
 
 RemoteListOfFiles::~RemoteListOfFiles() {
@@ -188,7 +190,7 @@ int RemoteListOfFiles::performGetOnBucket(char *marker, int setLocationHeader, c
 	if (authorization == NULL) {
 		free(date);
 	  curl_easy_cleanup(curl);		
-		strcpy(errorResult, "Error in auth module.");
+		strcpy(errorResult, "Error in auth module");
 		return LIST_FAILED;
 	}
 
@@ -268,9 +270,9 @@ int RemoteListOfFiles::downloadList() {
 		char errorResult[1024*100] = "";
 
 		if (strlen(lastKey)>0) {
-			printf("[List] Getting 1000 files after %s\n", lastKey);
+			LOG(LOG_INFO, "[List] Getting 1000 files after %s", lastKey);
 		} else { 
-			printf("[List] Getting first 1000 files\n");
+			LOG(LOG_INFO, "[List] Getting first 1000 files");
 		}
 
 		char *body = (char *) malloc(1024*1024*3); // 3mb should be enough?
@@ -278,19 +280,19 @@ int RemoteListOfFiles::downloadList() {
 		uint64_t bodySize=0;
 		int res = this->performGetOnBucket(lastKey, 0, body, &bodySize, &statusCode, errorResult); 
 		if (res==LIST_FAILED) {
-			printf("[List] FAIL GET: %s\n", errorResult);
+			LOG(LOG_FATAL, "[List] FAIL GET: %s", errorResult);
 			free(body);
 			return LIST_FAILED;
 		}
 
 		if (statusCode==404) {
-			printf("[List] FAIL GET: Bucket doesn't exists\n");
+			LOG(LOG_FATAL, "[List] FAIL GET: Bucket doesn't exists");
 			free(body);
 			return LIST_FAILED;
 		}
 
 		if (statusCode!=200) {
-			printf("[List] FAIL GET: HTTP status code = %d\n", statusCode);
+			LOG(LOG_FATAL, "[List] FAIL GET: HTTP status code = %d", statusCode);
 			free(body);
 			return LIST_FAILED;
 		}
@@ -306,7 +308,7 @@ int RemoteListOfFiles::downloadList() {
 		free(body);
 
 		if (!res) {
-			printf("[List] FAIL Parsing XML: %s\n", errorResult);
+			LOG(LOG_FATAL, "[List] FAIL Parsing XML: %s", errorResult);
 			return LIST_FAILED;
 		}
 
@@ -427,14 +429,14 @@ int RemoteListOfFiles::resolveMtimes() {
 
 				int res = self->performHeadOnFile(self->paths[i], &mtime, &statusCode, errorResult);
 				if (res==HEAD_FAILED) {
-					printf("\n[MetaUpdate] FAIL %s: %s\n", self->paths[i], errorResult);
+					LOG(LOG_FATAL, "[MetaUpdate] FAIL %s: %s", self->paths[i], errorResult);
 					failed=1;
 					dispatch_semaphore_signal(threadsCount);							
 					return;
 				}
 
 				if (statusCode!=200) {
-					printf("\n[MetaUpdate] FAIL %s: HTTP status=%d\n", self->paths[i], statusCode);
+					LOG(LOG_FATAL, "[MetaUpdate] FAIL %s: HTTP status=%d", self->paths[i], statusCode);
 					failed=1;
 					dispatch_semaphore_signal(threadsCount);							
 					return;
@@ -442,7 +444,11 @@ int RemoteListOfFiles::resolveMtimes() {
 
 				self->mtimes[i] = mtime;
 				double percent = (double) i / (double) self->count;
-				printf("\r[MetaUpdate] Updated %.1f%% (%u files out of %u)     \r", percent*100, (uint32_t) i, self->count);
+
+				if (self->showProgress) {
+					printf("\r[MetaUpdate] Updated %.1f%% (%u files out of %u)     \r", percent*100, (uint32_t) i, self->count);
+				}
+				LOG(LOG_INFO, "[MetaUpdate] updated %s", self->paths[i]);
 			}
 
 			dispatch_semaphore_signal(threadsCount);							
@@ -455,10 +461,8 @@ int RemoteListOfFiles::resolveMtimes() {
 
 	dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
 
-	if (failed) {
-		printf("\n[MetaUpdate] Some failed\n");
-	} else { 
-		printf("\n[MetaUpdate] All %d files updated\n", i);
+	if (!failed) {
+		LOG(LOG_INFO, "[MetaUpdate] All %d files updated", i);
 	}
 	
 	fflush(stdout);
@@ -476,7 +480,7 @@ int RemoteListOfFiles::checkAuth() {
 	int res = this->performGetOnBucket(NULL, 1, body, &bodySize, &statusCode, errorResult); 
 
 	if (res == LIST_FAILED) {
-		printf("[Auth] GET Failed: %s\n", errorResult);
+		LOG(LOG_DBG, "[Auth] GET Failed: %s", errorResult);
 		return AUTH_FAILED;
 	}
 
