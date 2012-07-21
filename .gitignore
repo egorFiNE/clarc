@@ -3,3 +3,7 @@ libsqlite3.a
 *.o
 clarc
 help.c
+*.sublime-*
+*.xcodeproj/
+*.dSYM/
+test/test
