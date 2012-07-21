@@ -76,11 +76,12 @@ char *readXml(int num) {
 	if (!f) {
 		return NULL;
 	}
-	uint32_t len = 800*1024*1024;
+	uint32_t len = 2*1024*1024;
 
 	char *sirko = (char *)malloc(len); 
 	bzero(sirko, len);
-	fread(sirko, 1, len, f);
+	size_t realBytes = fread(sirko, 1, len, f);
+	sirko = (char *)realloc(sirko, realBytes);
 	fclose(f);
 
 	return sirko;
