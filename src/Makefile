@@ -1,4 +1,4 @@
-VERSION=0.0.2
+VERSION=0.0.3
 CC=clang
 CXX=clang++
 CFLAGS_BASIC=-O3 -g -fblocks -Wall -D_FILE_OFFSET_BITS=64  `xml2-config --cflags`  -DVERSION=\"$(VERSION)\"
