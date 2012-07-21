@@ -10,12 +10,14 @@ using namespace std;
 #include <errno.h>
 #include <dirent.h>
 #include "localFileList.h"
+#include "filePattern.h"
 
-LocalFileList::LocalFileList() {
+LocalFileList::LocalFileList(FilePattern *excludeFilePattern) {
 	this->paths = (char **) malloc(sizeof(char *) * 100);
 	this->sizes = (uint64_t *) malloc(sizeof(uint64_t) * 100);
 	this->allocCount = 100;
 	this->count = 0;
+	this->excludeFilePattern = excludeFilePattern;
 }
 
 LocalFileList::~LocalFileList() {
@@ -25,9 +27,16 @@ LocalFileList::~LocalFileList() {
 
 	free(this->sizes);
 	free(this->paths);
+
+	this->excludeFilePattern = NULL;
 }
 
 void LocalFileList::add(char *path, uint64_t size) {
+	if (this->excludeFilePattern && this->excludeFilePattern->matches(path)) {
+		printf("[File List] Excluded %s\n", path);
+		return;
+	}
+
 	this->paths[this->count] = strdup(path);
 	this->sizes[this->count] = size;
 	this->count++;

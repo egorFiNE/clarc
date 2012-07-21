@@ -1,8 +1,8 @@
 CC=clang
 CXX=clang++
-CFLAGS_BASIC=-O0 -g -fblocks -Wall -D_FILE_OFFSET_BITS=64  `xml2-config --cflags`  -DVERSION=\"test\" -I../src/ -Wno-deprecated-writable-strings
-CXXFLAGS_BASIC=$(CFLAGS_BASIC) -O0 -Wno-write-strings  -g
-LDFLAGS_BASIC=`xml2-config --libs` -L/usr/local/lib -lcurl -lcheck
+CFLAGS_BASIC=-O3 -g -fblocks -Wall -D_FILE_OFFSET_BITS=64  `xml2-config --cflags`  -DVERSION=\"test\" -I../src/ -Wno-deprecated-writable-strings -I../vendor
+CXXFLAGS_BASIC=$(CFLAGS_BASIC)
+LDFLAGS_BASIC=`xml2-config --libs` -L/usr/local/lib -lcurl -lcheck ../libre2.a
 
 UNAME := $(shell uname)
 ifeq ($(UNAME), Linux)
@@ -18,8 +18,8 @@ LDFLAGS=$(LDFLAGS_BASIC) -lz -lssl -lcrypto ../libsqlite3.a
 endif
 
 OBJS=../src/base64.o ../src/sha1.o ../src/hmac-sha1.o ../src/memxor.o ../src/curlResponse.o ../src/utils.o
-SOURCES=../src/localFileList.cc ../src/amazonCredentials.cc ../src/amzHeaders.cc ../src/fileListStorage.cc ../src/remoteListOfFiles.cc ../src/upload.cc
-TESTS=./localFileListTest.cc ./amazonCredentialsTest.cc ./amzHeadersTest.cc ./fileListStorageTest.cc ./remoteListOfFilesTest.cc ./uploadTest.cc
+SOURCES=../src/localFileList.cc ../src/amazonCredentials.cc ../src/amzHeaders.cc ../src/fileListStorage.cc ../src/remoteListOfFiles.cc ../src/upload.cc ../src/filePattern.cc
+TESTS=./localFileListTest.cc ./amazonCredentialsTest.cc ./amzHeadersTest.cc ./fileListStorageTest.cc ./remoteListOfFilesTest.cc ./uploadTest.cc 
 all: test
 
 clean:

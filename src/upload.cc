@@ -67,8 +67,9 @@ void Uploader::progress(char *path, double uploadedBytes, double ulnow, double u
 	}
 }
 
-Uploader::Uploader(AmazonCredentials *amazonCredentials) {
+Uploader::Uploader(AmazonCredentials *amazonCredentials, FilePattern *excludeFilePattern) {
 	this->amazonCredentials = amazonCredentials;
+	this->excludeFilePattern = excludeFilePattern;
 	this->totalSize=0;
 	this->uploadedSize=0;
 	this->showProgress=1;
@@ -81,6 +82,7 @@ Uploader::Uploader(AmazonCredentials *amazonCredentials) {
 
 Uploader::~Uploader() {
 	this->amazonCredentials = NULL;
+	this->excludeFilePattern = NULL;
 }
 
 void Uploader::extractLocationFromHeaders(char *headers, char *locationResult) {
@@ -426,7 +428,7 @@ char *Uploader::createRealLocalPath(char *prefix, char *path) {
 }
 
 int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
-	__block LocalFileList *files = new LocalFileList();
+	__block LocalFileList *files = new LocalFileList(this->excludeFilePattern);
 	files->recurseIn((char *) "", prefix);
 
 	this->totalSize =  files->calculateTotalSize();
@@ -444,7 +446,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 
 	for (int i=0;i<files->count;i++) {
 		char *path = (files->paths[i]+1);
-	
+
 		// we don't skip the storage file. We will just re upload it later.
 
 		char *realLocalPath = Uploader::createRealLocalPath(prefix, path);

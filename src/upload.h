@@ -4,8 +4,9 @@
 #include <iostream>
 using namespace std;
 
-#include "fileListStorage.h"
 #include <dispatch/dispatch.h>
+#include "fileListStorage.h"
+#include "filePattern.h"
 
 #define UPLOAD_SUCCESS 1
 #define UPLOAD_FAILED 0
@@ -18,6 +19,7 @@ private:
 	AmazonCredentials *amazonCredentials;
 	time_t lastProgressUpdate;
 	dispatch_queue_t systemQueryQueue;
+	FilePattern *excludeFilePattern;
 
 	int uploadFileWithRetry(
 		char *localPath, 
@@ -53,7 +55,7 @@ private:
 	static char *createRealLocalPath(char *prefix, char *path);
 
 public:
-	Uploader(AmazonCredentials *amazonCredentials);
+	Uploader(AmazonCredentials *amazonCredentials, FilePattern *excludeFilePattern);
 	~Uploader();
 
 	uint64_t totalSize;

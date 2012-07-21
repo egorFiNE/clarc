@@ -12,14 +12,16 @@ using namespace std;
 #include <sys/stat.h>
 #include <errno.h>
 #include <dirent.h>
+#include "filePattern.h"
 
 class LocalFileList
 {
 private:
 	uint32_t allocCount;
+	FilePattern *excludeFilePattern;
 
 public:
-	LocalFileList();
+	LocalFileList(FilePattern *excludeFilePattern);
 	~LocalFileList();
 
 	void add(char *path, uint64_t size);

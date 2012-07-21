@@ -20,7 +20,7 @@ extern "C" {
 LocalFileList *localFileList;
 
 void LocalFileList_setup(void) {
-	localFileList = new LocalFileList();
+	localFileList = new LocalFileList(NULL);
 }
 
 void LocalFileList_teardown(void) {

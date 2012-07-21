@@ -19,12 +19,14 @@ extern "C" {
 #include "amazonCredentials.h"
 #include "remoteListOfFiles.h"
 #include "upload.h"
+#include "filePattern.h"
 
 
 static char *accessKeyId=NULL, *secretAccessKey=NULL, *bucket=NULL, *endPoint = (char *) "s3.amazonaws.com",
 	*source=NULL, *databasePath=NULL, *databaseFilename= (char *)".files.sqlite3";
 static int performRebuild=0, performUpload=0, makeAllPublic=0, useRrs=0;
 
+FilePattern *excludeFilePattern;
 
 int rebuildDatabase(RemoteListOfFiles *remoteListOfFiles, AmazonCredentials *amazonCredentials, FileListStorage *fileListStorage) {
 	int res = remoteListOfFiles->downloadList();
@@ -115,6 +117,9 @@ int parseCommandline(int argc, char *argv[]) {
     { "databasePath",      required_argument,  NULL,  0 },
     { "databaseFilename",  required_argument,  NULL,  0 },
 
+    { "exclude",           required_argument,  NULL,  0 },
+    { "excludeFromFile",   required_argument,  NULL,  0 },
+
     { "rebuild",           no_argument,        NULL,  0 },
     { "upload",            no_argument,        NULL,  0 },
 
@@ -176,6 +181,17 @@ int parseCommandline(int argc, char *argv[]) {
 
   	} else if (strcmp(longName, "upload")==0) {
   		performUpload=1;
+
+  	} else if (strcmp(longName, "exclude")==0) {
+  		if (!excludeFilePattern->add(optarg)) {
+  			printf("Pattern `%s' is not valid.\n", optarg);
+  			exit(1);
+  		}
+  	} else if (strcmp(longName, "excludeFromFile")==0) {
+  		if (!excludeFilePattern->readFile(optarg)) {
+  			printf("Cannot read or parse patterns in %s\n", optarg);
+  			exit(1);
+  		}
   	}
   }
 
@@ -254,6 +270,8 @@ int main(int argc, char *argv[]) {
   curl_global_init(CURL_GLOBAL_ALL);
 
   if (!parseCommandline(argc, argv)) {
+	excludeFilePattern = new FilePattern();
+
   	exit(1);
   }
 
@@ -296,7 +314,12 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (performUpload) {
-		Uploader *uploader = new Uploader(amazonCredentials);
+		if (excludeFilePattern->count==0) {
+			delete excludeFilePattern;
+			excludeFilePattern=NULL;
+		}
+
+		Uploader *uploader = new Uploader(amazonCredentials, excludeFilePattern);
 		uploader->useRrs = useRrs;
 		uploader->makeAllPublic = makeAllPublic;
 
