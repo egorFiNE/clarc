@@ -26,4 +26,4 @@ clean:
 	rm -f test *.o
 
 test: $(OBJS) $(HEADERS) $(SOURCES) $(TESTS) ./test.cc
-	$(CXX) $(CFLAGS) -o test $(SOURCES) $(TESTS) ./test.cc $(OBJS) $(LDFLAGS) && ./test 2>/dev/null
+	$(CXX) $(CFLAGS) -o test $(SOURCES) $(TESTS) ./test.cc $(OBJS) $(LDFLAGS) 
