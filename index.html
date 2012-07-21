@@ -24,8 +24,8 @@
 						<li><a href="#manual">manual</a></li>
 						<li><a href="#downloads">downloads</a></li>
 						<li><a href="#faq">faq</a></li>
-						<li><a href="#build">build</a></li>
 						<li><a href="#todo">todo</a></li>
+						<li><a href="build.html">build</a></li>
 					</ul>
 				</nav>
 			</div><!-- unit-inner -->
@@ -46,10 +46,9 @@
 <div>
 	<div class="features">
 		<ul class="features">
+			<li>Great for backup and S3&#160;website deployment</li>
 			<li>Multithreaded</li>
-			<li>Consistent</li>
 			<li>Linux and OS&nbsp;X support</li>
-			<li>Made with love</li>
 		</ul>
 	</div>
 
@@ -133,27 +132,90 @@
 	The file is updated in local meta database <b>only</b> after it is successfully uploaded and Amazon S3 returned MD5 checksum (which is also stored, of course).
 </p>
 
-<h3>Command-line options</h3>
+<h3>Path options</h3>
 
-<dt>
+<dl>
+
 	<dt>--source <span class="argument">&lt;path&gt;</span> <span class="mandatory">*</span></dt>
 	<dd>Actual absolute path to folder being uploaded.</dd>
+
+	<dt>--exclude <span class="argument">&lt;pattern&gt;</span></dt>
+	<dd>Ignore certain files/folders according to the Regular Expression pattern. Example:
+
+<pre>clarc --upload <span class="codeBackslash">\</span>
+      --accessKeyId UKIOIZZADUGFFDD7SFVF  <span class="codeBackslash">\</span>
+      --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  <span class="codeBackslash">\</span>
+      --source <span class="paramSource">/home/egor/Music/</span> <span class="codeBackslash">\</span>
+      --bucket <span class="paramDest">music.egorfine.com</span> <span class="codeBackslash">\</span>
+      --exclude <span class="paramExclude">.+\.m4a$</span> --exclude <span class="paramExclude">.+\.m4v$</span> <span class="codeBackslash">\</span>
+      --exclude <span class="paramExclude">\/Justin\ Bieber\/.+$</span></pre>
+
+      This will upload everything but m4v &amp; m4a files as well as skip a folder with garbage. You can specify more than a single <code>--exclude</code> parameter. <br/><br/>
+      See <a href="http://code.google.com/p/re2/wiki/Syntax">Google re2 syntax</a> page for details on the possible regular expressions.
+	</dd>
+
+	<dt>--excludeFromFile <span class="argument">&lt;file name&gt;</span></dt>
+	<dd>The same as <code>--exclude</code> but will read a list of exclude patterns from file instead of the command-line argument. The patterns in file must be newline-separated.</dd>
+</dl>
+
+<h3>Amazon S3 options</h3>
+
+<dl>
 	<dt>--accessKeyId <span class="argument">&lt;string&gt;</span>, --secretAccessKey <span class="argument">&lt;string&gt;</span> <span class="mandatory">*</span></dt>
 	<dd>Amazon S3 Access Credentials. Get them <a href="https://portal.aws.amazon.com/gp/aws/securityCredentials">here</a>. 
+
 	<dt>--bucket <span class="argument">&lt;string&gt;</span> <span class="mandatory">*</span></dt>
 	<dd>Name of the Amazon S3 bucket to store your files. Must exists. (Yes, I will later implement creation on demand.)</dd>
+
 	<dt>--endPoint <span class="argument">&lt;string&gt;</span> <span class="mandatory">*</span></dt>
 	<dd>Amazon S3 Endpoint. Specify rubbish to get the list of available endpoints 
 		or simply use the default one, which is suitable for all regions.</dd>
+
 	<dt>--rrs</dt>
 	<dd>Use <a href="http://aws.amazon.com/s3/faqs/#What_is_RRS">Reduced Redundancy Storage</a> instead of the Standard Storage.</dd>
+
 	<dt>--public</dt>
 	<dd>Make all uploaded files publicly accessible on Amazon S3. By default all files are private.</dd>
-	<dt>--databasePath <span class="argument">&lt;path&gt;</span></dt>
+	<dt>--skipSsl</dt>
+	<dd>Do not use SSL when connecting to S3. Useful if you are connecting within AWS.</dd> 
+</dl>
+
+<h3>Display options</h3>
+
+<dl>
+	<dt>--progress</dt>
+	<dd>Show progress indicator for meta update and uploads.</dd>
+
+	<dt>--logLevel <span class="argument">&lt;int&gt;</span></dt>
+	<dd>Set stdout log level. 
+
+		Possible values are: 
+		<ol style="padding-left: 2em">
+			<li>only fatals;</li>
+			<li>+errors;</li>
+			<li>+warnings;</li>
+			<li>+info;</li>
+			<li>debug.</li>
+		</ol>
+
+	Default is 2 (fatals and errors). 
+	</dd>
+</dl>
+
+<h3>Metadata storage options</h3>
+
+<dl>
+	<dt>--dbPath <span class="argument">&lt;path&gt;</span></dt>
 	<dd>Absolute path to local database file instead of the default path. 
 		By default it's the source folder. <b>Note:</b> this argument MUST NOT specify file name.</dd>
-	<dt>--databaseFilename <span class="argument">&lt;file name&gt;</span></dt>
+
+	<dt>--dbFilename <span class="argument">&lt;file name&gt;</span></dt>
 	<dd>File name for the database. By default it's <code>.files.sqlite3</code>.
+</dl>
+
+<h3>Misc options</h3>
+
+<dl>
 	<dt>--version, --help</dt>
 	<dd>Says something.</dd>
 </dl>
@@ -221,99 +283,13 @@
 -->
 </dl>
 
-<h2 id="build">Install / Build</h2>
-
-<h3>Run on Linux</h3>
-
-<p>
-	<b>clarc</b> is built on <a href="http://en.wikipedia.org/wiki/Grand_Central_Dispatch">Grand Central Dispatch</a> to use all available CPU cores, network bandwidth and disk speed. In order to run <b>clarc</b> binary on Linux you will need the following libraries installed: 
-	<ul>
-		<li>libdispatch</li>
-		<li>libcurl with SSL support</li>
-		<li>libxml2</li>
-	</ul>
-	On a modern Linux distribution (except Fedora) this is all available out of the box
-</p>
-
-<p>To install this libraries on <b>Ubuntu 12</b> run:</p>
-<pre><code>sudo apt-get install libdispatch0</code></pre>
-
-<p>To install this libraries on <b>Debian 6.0.5</b> run:</p>
-<pre><code>sudo apt-get install libcurl3 libdispatch0</code></pre>
-
-<h3>Build on Linux</h3>
-
-<p>
-	To build <b>clarc</b> you need <a href="http://clang.llvm.org/">clang C/C++ compiler</a> as well as library headers. 
-</p>
-
-	<p>
-		To install build dependencies on <b>Ubuntu 12:</b>
-		<pre><code>sudo apt-get install build-essential clang libxml2-dev libsqlite3-dev <span class="codeBackslash">\</span>
-     libcurl4-openssl-dev libdispatch-dev</code></pre>
-	</p>
-
-	<p>
-		To install build dependencies on <b>Debian 6.0.5:</b>
-		<pre><code>sudo apt-get install clang libdispatch-dev gcc make gcc++ <span class="codeBackslash">\</span>
-     libstdc++6-4.4-dev g++ libsqlite3-dev libcurl4-openssl-dev libxml2-dev</code></pre>
-	</p>
-
-	<p>
-		Then simply <code>make</code>. 
-	</p>
-
-<h3>Build on Fedora Linux</h3>
-
-<p>
-	It is incredibly complex as <a href="https://bugzilla.redhat.com/show_bug.cgi?id=824406">clang++ is broken on Fedora 17</a>. The procedure works but it's not for the faint of the heart so I'd suggest you use by prebuild binary. Heck, it's even different for i386 and x86_64 Fedoras! :-(
-</p>
-
-<p>
-	0. Install build dependencies.
-<pre><code>sudo yum install libstdc++-devel libstdc++ gcc gcc-g++ clang <span class="codeBackslash">\</span>
-     clang-devel llvm-libs llvm-devel libcurl-devel libsqlite3x-devel <span class="codeBackslash">\</span>
-     libxml2-devel rpm-build</code></pre>
-</p>
-
-<p>
-	1. Build <code>libdispatch</code> with SRPMS available here: <a href="http://mark.heily.com/node/51/release">http://mark.heily.com/node/51/release</a>. Install the resulting RPMS (you might want to add <code>--nodeps</code>). If <code>libdispatch</code> doesn't build, you might need to move <code>/usr/lib/pkgconfig/*</code> to <code>/usr/share/pkgconfig/</code>.
-</p>
-
-<p>
-	2. Go to <code>clarc/src/</code> and remove all <code style="white-space: nowrap">#include &lt;iostream&gt;</code> and <<code style="white-space: nowrap">#include &lt;unistd.h&gt;</code> from files.  
-</p>
-
-<p>
-	3. In <code>upload.cc</code> add the following right after <code>extern "C" {</code>:
-	<pre><code>unsigned int sleep(unsigned int seconds);</pre></code>
-
-<p>
-	4. <code>make</code>
-</p>
-
-<h3>Build on OS X</h3>
-
-<p>OS X has GCD and clang available by default, but you must have Xcode (or Xcode command-line tools) installed. </p>
-
-<p>However SQLite3 is better to be rebuilt with threads support. Download the <a href="http://www.sqlite.org/download.html">latest SQLite source code</a> (pick the second link, the tar.gz). Unpack it, then run: 
-
-<pre><code>./configure --enable-threadsafe
-make</code></pre>
-	</p>
-
-<p>After it's done, copy <code>.libs/sqlite.a</code> into <code>clarc/</code> source code folder.</p>
-
-	<p>
-		Then simply <code>make</code>. 
-	</p>
 
 <h2 id="todo">TODO</h2>
 
 <h3>Client-side encryption</h3> 
 
 <p>
-	As much as I trust Amazon I don't trust myself securely storing keys and someone else stealing my data. Therefor <b>clarc</b>  must 
+	As much as I trust Amazon I don't trust myself securely storing keys and someone else stealing my data. Therefore <b>clarc</b>  must 
 	(optionally of course) encrypt files before they are uploaded to Amazon S3.
 </p>
 
@@ -335,13 +311,6 @@ make</code></pre>
 
 <p>
 	Essentially this is just command line parsing from file instead of the command line. So instead of calling <code>clarc --source ...</code> you will invoce <code>clarc ./backup.ini</code> or something.
-</p>
-
-<h3>Exclude and include patterns</h3> 
-
-<p>
-	No you don't need to upload the whole <code>.git/</code> folder or <code>.DS_Store</code> in every place to the S3 bucket.
-	There will be two commands, <code>--exclude</code> and <code>--include</code> that will accept multiple regexps. 
 </p>
 
 <h3>Check UID, GID and mode changes</h3>
