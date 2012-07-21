@@ -4,7 +4,7 @@
 #define CONNECT_TIMEOUT 15 // seconds
 #define MAXCONNECTS 50 // for curl's CURLOPT_MAXCONNECTS
 #define LOW_SPEED_LIMIT 1024 // one kilobyte
-#define LOW_SPEED_TIME 10 // ten seconds the speed is low - timeout
+#define LOW_SPEED_TIME 15 // ten seconds the speed is low - timeout
 
 #define RETRY_SLEEP_TIME 5 // second, sleep time increment between failed retries to upload
 #define RETRY_FAIL_AFTER 3 // how many tries to perform on failed upload
