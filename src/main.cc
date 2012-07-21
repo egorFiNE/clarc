@@ -99,7 +99,7 @@ char *buildDatabaseFilePath(char *databaseFilename, char *databasePath) {
 }
 
 void showVersion() {
-	printf("clarc version " VERSION " (c) 2012 Egor Egorov <me@egorfine.com>  |  MIT License  |  http://egorfine.com/clarc/\n");
+	printf("clarc " VERSION " (c) 2012 Egor Egorov <me@egorfine.com>  |  MIT License  |  http://egorfine.com/clarc/\n");
 }
 
 int parseCommandline(int argc, char *argv[]) {
