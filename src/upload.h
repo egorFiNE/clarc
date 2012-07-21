@@ -64,6 +64,7 @@ public:
 	int useRrs;
 	int makeAllPublic;
 	int useSsl;
+	int dryRun;
 
 	void progress(char *path, double uploadedBytes, double ulnow, double ultotal);
 	int uploadFiles(FileListStorage *fileListStorage, char *prefix);

@@ -25,7 +25,7 @@ extern "C" {
 
 static char *accessKeyId=NULL, *secretAccessKey=NULL, *bucket=NULL, *endPoint = (char *) "s3.amazonaws.com",
 	*source=NULL, *databasePath=NULL, *databaseFilename= (char *)".files.sqlite3";
-static int performRebuild=0, performUpload=0, makeAllPublic=0, useRrs=0, showProgress=0, skipSsl=0;
+static int performRebuild=0, performUpload=0, makeAllPublic=0, useRrs=0, showProgress=0, skipSsl=0, dryRun=0;
 
 FilePattern *excludeFilePattern;
 
@@ -129,6 +129,8 @@ int parseCommandline(int argc, char *argv[]) {
     { "progress",          no_argument,        NULL,  0 },
     { "logLevel",          required_argument,  NULL,  0 },
 
+    { "dryRun",            no_argument,        NULL,  0 },
+
     { "rebuild",           no_argument,        NULL,  0 },
     { "upload",            no_argument,        NULL,  0 },
 
@@ -178,6 +180,9 @@ int parseCommandline(int argc, char *argv[]) {
   	} else if (strcmp(longName, "rss")==0) {
   		printf("Warning: you spelled --rss; you meant -rrs which stands for Reduced Redundancy Storage.\n");
   		useRrs = 1;
+
+    } else if (strcmp(longName, "dryRun")==0) {
+      dryRun = 1;
 
     } else if (strcmp(longName, "progress")==0) {
       showProgress = 1;
@@ -356,6 +361,7 @@ int main(int argc, char *argv[]) {
     if (skipSsl) {
       uploader->useSsl=0;
     }
+    uploader->dryRun = dryRun;
 
 		res = uploader->uploadFiles(fileListStorage, source);
 

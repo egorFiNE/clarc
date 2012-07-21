@@ -37,6 +37,8 @@ OPTIONS:
     --logLevel <int>    Set stdout log level from 1 (only fatals) to 5 (debug).
                         Default is 2 (fatals and errors).
 
+    --dryRun                Do not actually upload
+
     --dbPath <path>         Absolute path to local database file instead
                             of the default path; by default it's the source 
                             folder. Note: this argument MUST NOT specify 

@@ -76,6 +76,7 @@ Uploader::Uploader(AmazonCredentials *amazonCredentials, FilePattern *excludeFil
 	this->useRrs = 0;
 	this->makeAllPublic = 0;
 	this->useSsl = 1;
+	this->dryRun = 0;
 
 	this->systemQueryQueue = dispatch_queue_create("com.egorfine.systemquery", NULL);
 }
@@ -490,37 +491,41 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 		
 		char *contentType = guessContentType(path);
 
-		__block Uploader *self = this;
-	
-		dispatch_semaphore_wait(threadsCount, DISPATCH_TIME_FOREVER);
-		dispatch_group_async(group, globalQueue, ^{
-			char errorResult[1024*100];
-			if (!failed) {
-				int res = self->uploadFileWithRetryAndStore(
-					fileListStorage, realLocalPath, path, contentType, 
-					&fileInfo,
-					sqlQueue,
-					errorResult
-				);
-				if (res==UPLOAD_FAILED) {
-					LOG(LOG_FATAL, "[Upload] FAIL %s: %s", path, errorResult);
-					failed=1;
-				} else {
-					LOG(LOG_INFO, "[Upload] Uploaded %s", path);
-				}
-			}
-			
+		if (this->dryRun) {
+			LOG(LOG_INFO, "[Upload] [dry] Uploaded %s", path);
 			free(realLocalPath);
-			
-			dispatch_semaphore_signal(threadsCount);
-		});
+		} else { 
+			__block Uploader *self = this;
 		
-		if (failed) {
-			break;
+			dispatch_semaphore_wait(threadsCount, DISPATCH_TIME_FOREVER);
+			dispatch_group_async(group, globalQueue, ^{
+				char errorResult[1024*100];
+				if (!failed) {
+					int res = self->uploadFileWithRetryAndStore(
+						fileListStorage, realLocalPath, path, contentType, 
+						&fileInfo,
+						sqlQueue,
+						errorResult
+					);
+					if (res==UPLOAD_FAILED) {
+						LOG(LOG_FATAL, "[Upload] FAIL %s: %s", path, errorResult);
+						failed=1;
+					} else {
+						LOG(LOG_INFO, "[Upload] Uploaded %s", path);
+					}
+				}
+				
+				free(realLocalPath);
+				
+				dispatch_semaphore_signal(threadsCount);
+			});
+			if (failed) {
+				break;
+			}
+			dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
 		}
 	}
 
-	dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
 	LOG(LOG_INFO, "[Upload] Finished", "");
 
 	delete files;
