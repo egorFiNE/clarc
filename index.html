@@ -213,9 +213,22 @@
 	<dd>File name for the database. By default it's <code>.files.sqlite3</code>.
 </dl>
 
+<h3>Network options</h3>
+
+<dl>
+	<dt>--uploadThreads <span class="argument">&lt;int&gt;</span></dt>
+	<dd>Count of threads to spawn for upload. Default: 10.</dd>
+	<dt>--connectTimeout <span class="argument">&lt;seconds&gt;</span></dt>
+	<dd>Timeout for connect operation only, in seconds. Default: 15.</dd>
+	<dt>--networkTimeout <span class="argument">&lt;seconds&gt;</span></dt>
+	<dd>How many seconds to wait till the stalled connection should be killed. Default: 15.</dd>
+</dl>
+
 <h3>Misc options</h3>
 
 <dl>
+	<dt>--dryRun</dt>
+	<dd>Do not actually upload files; do not actually rebuild database.</dd>
 	<dt>--version, --help</dt>
 	<dd>Says something.</dd>
 </dl>
