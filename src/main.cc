@@ -25,7 +25,7 @@ extern "C" {
 
 static char *accessKeyId=NULL, *secretAccessKey=NULL, *bucket=NULL, *endPoint = (char *) "s3.amazonaws.com",
 	*source=NULL, *databasePath=NULL, *databaseFilename= (char *)".files.sqlite3";
-static int performRebuild=0, performUpload=0, makeAllPublic=0, useRrs=0, showProgress=0;
+static int performRebuild=0, performUpload=0, makeAllPublic=0, useRrs=0, showProgress=0, skipSsl=0;
 
 FilePattern *excludeFilePattern;
 
@@ -117,6 +117,7 @@ int parseCommandline(int argc, char *argv[]) {
     { "public",            no_argument,        NULL,  0 },
     { "rrs",               no_argument,        NULL,  0 },
     { "rss",               no_argument,        NULL,  0 }, // common typo
+    { "skipSsl",           no_argument,        NULL,  0 },
 
     { "source",            required_argument,  NULL,  0 },
     { "ddbPath",           required_argument,  NULL,  0 },
@@ -167,6 +168,9 @@ int parseCommandline(int argc, char *argv[]) {
 
   	} else if (strcmp(longName, "public")==0) {
   		makeAllPublic = 1;
+
+    } else if (strcmp(longName, "skipSsl")==0) {
+      skipSsl = 1;
 
   	} else if (strcmp(longName, "rrs")==0) {
   		useRrs = 1;
@@ -309,6 +313,9 @@ int main(int argc, char *argv[]) {
 
 	RemoteListOfFiles *remoteListOfFiles = new RemoteListOfFiles(amazonCredentials);
   remoteListOfFiles->showProgress = showProgress;
+  if (skipSsl) {
+    remoteListOfFiles->useSsl=0;
+  }
 
 	res = remoteListOfFiles->checkAuth();
 	if (res == AUTH_FAILED_BUCKET_DOESNT_EXISTS) {
@@ -346,6 +353,9 @@ int main(int argc, char *argv[]) {
 		uploader->useRrs = useRrs;
 		uploader->makeAllPublic = makeAllPublic;
     uploader->showProgress = showProgress;
+    if (skipSsl) {
+      uploader->useSsl=0;
+    }
 
 		res = uploader->uploadFiles(fileListStorage, source);
 

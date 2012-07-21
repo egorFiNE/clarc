@@ -22,6 +22,8 @@ OPTIONS:
 
     --rrs                   Use Reduced Redundancy Storage on S3.
     --public                Make all files public. Default: private. 
+    --skipSsl               Do not use SSL when connecting to S3. 
+                            Useful if you are connecting within AWS.
 
     --exclude <pattern>        Ignore certain files/folders according to 
                                the Regular Expression pattern. There could 

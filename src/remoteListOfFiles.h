@@ -39,6 +39,7 @@ public:
 	uint32_t *mtimes;
 	uint32_t count;
 	int showProgress;
+	int useSsl;
 };
 
 #define LIST_FAILED 0

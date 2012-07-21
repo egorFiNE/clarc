@@ -75,6 +75,7 @@ Uploader::Uploader(AmazonCredentials *amazonCredentials, FilePattern *excludeFil
 	this->lastProgressUpdate = 0;
 	this->useRrs = 0;
 	this->makeAllPublic = 0;
+	this->useSsl = 1;
 
 	this->systemQueryQueue = dispatch_queue_create("com.egorfine.systemquery", NULL);
 }
@@ -212,7 +213,7 @@ CURLcode Uploader::uploadFile(
 	if (url) {
 		postUrl = strdup(url);
 	} else { 
-	  postUrl = amazonCredentials->generateUrl(escapedRemotePath, 1); 
+	  postUrl = amazonCredentials->generateUrl(escapedRemotePath, this->useSsl); 
 	}
 	free(escapedRemotePath);
 
