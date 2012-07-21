@@ -46,6 +46,11 @@ int rebuildDatabase(RemoteListOfFiles *remoteListOfFiles, AmazonCredentials *ama
 		return LIST_FAILED;
 	}
 
+  if (dryRun) {
+    LOG(LOG_INFO, "[MetaUpdate] [dry] Skipped storing list of files");
+    return LIST_SUCCESS;
+  }
+  
 	if (fileListStorage->storeRemoteListOfFiles(remoteListOfFiles) == STORAGE_FAILED) {
     LOG(LOG_FATAL, "[MetaUpdate] Failed to store list of files");
 		return LIST_FAILED;
