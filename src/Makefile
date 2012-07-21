@@ -1,9 +1,9 @@
 VERSION=0.0.2
 CC=clang
 CXX=clang++
-CFLAGS_BASIC=-O3 -g -fblocks -Wall -D_FILE_OFFSET_BITS=64  `xml2-config --cflags`  -DVERSION=\"$(VERSION)\" -I../vendor
+CFLAGS_BASIC=-O3 -g -fblocks -Wall -D_FILE_OFFSET_BITS=64  `xml2-config --cflags`  -DVERSION=\"$(VERSION)\"
 CXXFLAGS_BASIC=$(CFLAGS_BASIC) -Wno-write-strings -g 
-LDFLAGS_BASIC=`xml2-config --libs` -L/usr/local/lib -lcurl  ../libre2.a
+LDFLAGS_BASIC=`xml2-config --libs` -L/usr/local/lib -lcurl /usr/local/lib/libre2.a
 
 UNAME := $(shell uname)
 ifeq ($(UNAME), Linux)
