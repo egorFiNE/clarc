@@ -1,14 +1,14 @@
 VERSION=0.0.3
 CC=gcc
 CXX=g++
-BASIC_FLAGS=-O0 -g -pthreads -fblocks -Wall -D_FILE_OFFSET_BITS=64 `xml2-config --cflags` -DVERSION=\"$(VERSION)\" -Wno-write-strings -ftrapv
+BASIC_FLAGS=-O0 -g  -DTEST -Wall -D_FILE_OFFSET_BITS=64 `xml2-config --cflags` -DVERSION=\"$(VERSION)\" -Wno-write-strings -ftrapv
 LDFLAGS_BASIC=`xml2-config --libs` -L/usr/local/lib -lcurl /usr/local/lib/libre2.a
 
 UNAME := $(shell uname)
 ifeq ($(UNAME), Linux)
 CFLAGS=$(BASIC_FLAGS)
 CXXFLAGS=$(BASIC_FLAGS)
-LDFLAGS=$(LDFLAGS_BASIC) -pthreads  -lsqlite3 
+LDFLAGS=$(LDFLAGS_BASIC) -lsqlite3 
 endif
 
 ifeq ($(UNAME), Darwin)
@@ -30,5 +30,5 @@ help.c: help.txt help.h
 	$(CC) -c help.c 
 
 clarc: $(OBJS) $(HEADERS) help.c
-	$(CXX) $(CFLAGS) -o ../clarc $(OBJS) $(LDFLAGS) 
+	$(CXX) -o ../clarc $(OBJS) $(LDFLAGS) 
 
