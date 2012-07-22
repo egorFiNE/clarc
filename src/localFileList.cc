@@ -26,7 +26,7 @@ LocalFileList::LocalFileList(FilePattern *excludeFilePattern) {
 
 LocalFileList::~LocalFileList() {
 	for (uint32_t i=0;i<this->count;i++) {
-		this->paths[i]=NULL;
+		free(this->paths[i]);
 	}
 
 	free(this->sizes);
@@ -41,7 +41,7 @@ void LocalFileList::add(char *path, uint64_t size) {
 		return;
 	}
 
-	this->paths[this->count] = path;
+	this->paths[this->count] = strdup(path);
 	this->sizes[this->count] = size;
 	this->count++;
 	if (this->count>=this->allocCount) {
@@ -54,7 +54,7 @@ void LocalFileList::add(char *path, uint64_t size) {
 void LocalFileList::recurseIn(char *path, char *prefix) {
 	uint64_t len = strlen(prefix) + strlen(path)+2;
 	char *toOpen = (char *) malloc(len);
-	bzero(toOpen, len);
+	toOpen[0]=0;
 	strcat(toOpen, prefix);
 	strcat(toOpen, path);
 
@@ -65,10 +65,15 @@ void LocalFileList::recurseIn(char *path, char *prefix) {
 		if (dp->d_type == DT_REG) {
 			uint64_t len = (strlen(path)+strlen(dp->d_name)+2);
 			char *fullName = (char *) malloc((size_t)len);
-			sprintf(fullName, "%s/%s", path, dp->d_name);
+			fullName[0]=0;
+			strcat(fullName, path);
+			strcat(fullName, "/");
+			strcat(fullName, dp->d_name);
 
 			char *statName = (char *) malloc(strlen(prefix)+strlen(fullName)+2);
-			sprintf(statName, "%s%s", prefix, fullName);
+			statName[0]=0;
+			strcat(statName, prefix);
+			strcat(statName, fullName);
 
 			struct stat fileInfo;
 			if (lstat(statName, &fileInfo)<0) {
@@ -76,12 +81,16 @@ void LocalFileList::recurseIn(char *path, char *prefix) {
 			} else {
 				this->add(fullName, (uint64_t) fileInfo.st_size);
 			}
+			free(fullName);
 			free(statName);
 
 		} else if (dp->d_type == DT_DIR) {
 			if (strcmp(dp->d_name, ".")!=0 && strcmp(dp->d_name, "..")!=0) {
 				char *_path= (char *) malloc(strlen(path)+strlen(dp->d_name)+2);
-				sprintf(_path, "%s/%s", path, dp->d_name);
+				_path[0]=0;
+				strcat(_path, path);
+				strcat(_path, "/");
+				strcat(_path, dp->d_name);
 				this->recurseIn(_path, prefix);
 				free(_path);
 			}
