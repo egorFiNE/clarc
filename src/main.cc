@@ -132,7 +132,7 @@ int parseCommandline(int argc, char *argv[]) {
 		{ "uploadThreads",     required_argument,  NULL,  0 },
 
 		{ "source",            required_argument,  NULL,  0 },
-		{ "ddbPath",           required_argument,  NULL,  0 },
+		{ "dbPath",            required_argument,  NULL,  0 },
 		{ "dbFilename",        required_argument,  NULL,  0 },
 
 		{ "exclude",           required_argument,  NULL,  0 },
