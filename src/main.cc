@@ -153,8 +153,8 @@ int parseCommandline(int argc, char *argv[]) {
 	};
 
 	int ch, longIndex;
-	while ((ch = getopt_long(argc, argv, "Vh", longOpts, &longIndex)) != -1) {
-		if (ch=='V') {
+	while ((ch = getopt_long(argc, argv, "vh", longOpts, &longIndex)) != -1) {
+		if (ch=='v') {
 			showVersion();
 			exit(0);
 		} else if (ch=='h') {
