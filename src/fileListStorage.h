@@ -24,6 +24,7 @@ public:
 	int lookup(char *remotePath, char *md5, uint64_t *mtime);
 	int store(char *remotePath, char *md5, uint64_t mtime);
 	int storeRemoteListOfFiles(RemoteListOfFiles *remoteListOfFiles);
+	int truncate();
 };
 
 #endif

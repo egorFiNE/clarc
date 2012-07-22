@@ -111,7 +111,10 @@ void Uploader::extractLocationFromHeaders(char *headers, char *locationResult) {
     	return;
     }
 
-    strncpy(locationResult, locationPointer, endPointer-locationPointer);
+    int len = endPointer-locationPointer;
+
+    strncpy(locationResult, locationPointer, len);
+    locationResult[len]=0;
   }
 }
 
@@ -129,7 +132,7 @@ void Uploader::extractMD5FromETagHeaders(char *headers, char *md5) {
 	char *etag = strstr(headers, "ETag: ");
 	if (etag) {
 		char *pos = (etag+6);
-		if (strlen(pos)>=34 && *pos==0x22 && *(pos+33)==0x22) {
+		if (strlen(pos)>=34 && *pos==0x22 && *(pos+33)==0x22) { // double quotes
 			strncpy(md5, (pos+1), 32);
 			*(md5+32)=0;
 		}

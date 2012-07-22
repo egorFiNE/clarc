@@ -209,6 +209,7 @@ int RemoteListOfFiles::performGetOnBucket(char *marker, int setLocationHeader, c
   CurlResponseInit(&curlResponse);
 
   curl_easy_setopt(curl, CURLOPT_URL, url);
+  LOG(LOG_DBG, "[File list] GET %s", url);
   free(url);
 
   struct curl_slist *slist = NULL;

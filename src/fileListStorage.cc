@@ -134,6 +134,23 @@ int FileListStorage::store(char *remotePath, char *md5, uint64_t mtime) {
 	return STORAGE_SUCCESS;
 }
 
+int FileListStorage::truncate() {
+	char *sErrMsg = 0;
+	if (sqlite3_exec(this->sqlite, "BEGIN TRANSACTION", NULL, NULL, &sErrMsg) != SQLITE_OK) {
+		return STORAGE_FAILED;
+	}
+
+	if (sqlite3_exec(this->sqlite, "DELETE FROM files", NULL, NULL, &sErrMsg) != SQLITE_OK) {
+		return STORAGE_FAILED;
+	}
+
+	if (sqlite3_exec(this->sqlite, "END TRANSACTION", NULL, NULL, &sErrMsg) != SQLITE_OK) {
+		return STORAGE_FAILED;
+	}
+
+	return STORAGE_SUCCESS;
+}
+
 int FileListStorage::storeRemoteListOfFiles(RemoteListOfFiles *remoteListOfFiles) {
 	char *sErrMsg = 0;
 	sqlite3_stmt *stmt;

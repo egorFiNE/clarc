@@ -68,11 +68,6 @@ static char *endPoints[] = {
 	(char *) "s3-ap-southeast-1.amazonaws.com",
 	(char *) "s3-ap-northeast-1.amazonaws.com",
 	(char *) "s3-sa-east-1.amazonaws.com",
-
-#ifdef TEST
-	(char *) "test.dev",
-#endif
-	
 	NULL
 };
 
@@ -83,6 +78,13 @@ int validateEndpoint(char *endPoint) {
 			return 1;
 		}
 	}
+
+#ifdef TEST
+  if (strcmp(endPoint, "local")==0) { 
+    printf("EndPoint for testing purposes engaged.\n");
+    return 1;
+  }
+#endif
 
  	printf("--endPoint %s not valid, use one of:\n", endPoint);
 
@@ -409,11 +411,17 @@ int main(int argc, char *argv[]) {
     }
     uploader->dryRun = dryRun;
 
+#ifdef TEST
+    do {
+#endif
 		res = uploader->uploadFiles(fileListStorage, source);
-
 		if (res==UPLOAD_FAILED) {
 			exit(1);
 		}
+#ifdef TEST
+    fileListStorage->truncate();
+    } while (true);
+#endif
 
 		res = uploader->uploadDatabase(databaseFilePath, databaseFilename);
 		if (res==UPLOAD_FAILED) {
