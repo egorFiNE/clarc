@@ -81,8 +81,6 @@ Uploader::Uploader(AmazonCredentials *amazonCredentials, FilePattern *excludeFil
 	this->connectTimeout = CONNECT_TIMEOUT;
 	this->networkTimeout = LOW_SPEED_TIME;
 	this->uploadThreads = UPLOAD_THREADS;
-
-	this->systemQueryQueue = dispatch_queue_create("com.egorfine.systemquery", NULL);
 }
 
 Uploader::~Uploader() {
@@ -166,8 +164,8 @@ CURLcode Uploader::uploadFile(
 	char *canonicalizedResource=(char *)malloc(strlen(amazonCredentials->bucket) + strlen(escapedRemotePath) + 4);
 	sprintf(canonicalizedResource, "/%s/%s", amazonCredentials->bucket, escapedRemotePath);
 
-	__block char *gidHeader = (char *) malloc(1024);
-	__block char *uidHeader = (char *) malloc(1024);
+	char *gidHeader = (char *) malloc(1024);
+	char *uidHeader = (char *) malloc(1024);
 
 	// I believe this is only needed for Linux, as I have seen it failing when called in multiple threads.
 	// -- EE
@@ -482,7 +480,7 @@ char *Uploader::createRealLocalPath(char *prefix, char *path) {
 }
 
 int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
-	__block LocalFileList *files = new LocalFileList(this->excludeFilePattern);
+	LocalFileList *files = new LocalFileList(this->excludeFilePattern);
 	files->recurseIn((char *) "", prefix);
 
 	this->totalSize = files->calculateTotalSize();
