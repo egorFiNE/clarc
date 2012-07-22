@@ -21,7 +21,6 @@ private:
 	time_t lastProgressUpdate;
 	dispatch_queue_t systemQueryQueue;
 	FilePattern *excludeFilePattern;
-	Threads *threads;
 	int failed;
 
 	int uploadFileWithRetry(
@@ -58,6 +57,7 @@ private:
 	static char *createRealLocalPath(char *prefix, char *path);
 
 public:
+	Threads *threads;
 	Uploader(AmazonCredentials *amazonCredentials, FilePattern *excludeFilePattern);
 	~Uploader();
 
