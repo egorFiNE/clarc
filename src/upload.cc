@@ -447,7 +447,9 @@ void *uploader_runOverThreadFunc(void* a) {
 	free(threadCommand->realLocalPath);
 	free(threadCommand->fileInfo);
 	free(a); // possible?
+#ifndef SINGLETHREAD
 	pthread_exit(NULL);
+#endif
 }
 
 void Uploader::runOverThread(uint8_t threadNumber, FileListStorage *fileListStorage, char *realLocalPath, char *path, char *contentType, struct stat *fileInfo) {
@@ -558,9 +560,13 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 			free(fileInfo);
 			free(realLocalPath);
 		} else { 
+
+
+#ifndef SINGLETHREAD
 			int threadNumber = threads->sleepTillThreadFree();
 			threads->markBusy(threadNumber);
 			printf("Thread %d marked busy\n", threadNumber); fflush(stdout);
+#endif
 
 			struct ThreadCommand *threadCommand = (struct ThreadCommand *) malloc(sizeof(struct ThreadCommand));
 			threadCommand->self = this;
@@ -569,8 +575,16 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 			threadCommand->path = path;
 			threadCommand->realLocalPath = realLocalPath;// FIXME leak
 			threadCommand->fileListStorage = fileListStorage;
+#ifdef SINGLETHREAD
+			threadCommand->threadNumber = 1; 
+#else
 			threadCommand->threadNumber = threadNumber;
+#endif
 
+
+#ifdef SINGLETHREAD
+			uploader_runOverThreadFunc(threadCommand);
+#else 
 			pthread_t threadId;
 			int rc = pthread_create(&threadId, NULL, uploader_runOverThreadFunc, (void *)threadCommand);
 			threads->setThreadId(threadNumber, threadId);
@@ -578,8 +592,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 				fprintf(stderr, "ERROR; return code from pthread_create() is %d\n", rc);
 				exit(-1);
 			}
-
-
+#endif
 
 //			__block Uploader *self = this;
 		
