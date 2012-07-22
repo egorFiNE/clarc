@@ -2,6 +2,7 @@
 using namespace std;
 
 #include "threads.h"
+#include <unistd.h>
 
 Threads::Threads(int count) {
 	this->threadsCount=count;
