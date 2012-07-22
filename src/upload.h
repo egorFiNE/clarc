@@ -7,6 +7,7 @@ using namespace std;
 #include <dispatch/dispatch.h>
 #include "fileListStorage.h"
 #include "filePattern.h"
+#include "threads.h"
 
 #define UPLOAD_SUCCESS 1
 #define UPLOAD_FAILED 0
@@ -20,6 +21,8 @@ private:
 	time_t lastProgressUpdate;
 	dispatch_queue_t systemQueryQueue;
 	FilePattern *excludeFilePattern;
+	Threads *threads;
+	int failed;
 
 	int uploadFileWithRetry(
 		char *localPath, 
@@ -46,7 +49,7 @@ private:
 		char *remotePath, 
 		char *contentType, 
 		struct stat *fileInfo,
-		dispatch_queue_t sqlQueue,
+		//dispatch_queue_t sqlQueue,
 		char *errorResult
 	);
 
@@ -72,6 +75,7 @@ public:
 	void progress(char *path, double uploadedBytes, double ulnow, double ultotal);
 	int uploadFiles(FileListStorage *fileListStorage, char *prefix);
 	int uploadDatabase(char *databasePath, char *databaseFilename);
+	void runOverThread(uint8_t threadNumber, FileListStorage *fileListStorage, char *realLocalPath, char *path, char *contentType, struct stat *fileInfo);
 };
 
 #endif

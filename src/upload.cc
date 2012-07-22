@@ -35,6 +35,7 @@ unsigned int sleep(unsigned int seconds);
 #include "amazonCredentials.h"
 #include "amzHeaders.h"
 
+
 struct UploadProgress {
 	char *path;
 	double ullast;
@@ -170,12 +171,12 @@ CURLcode Uploader::uploadFile(
 
 	// I believe this is only needed for Linux, as I have seen it failing when called in multiple threads.
 	// -- EE
-	dispatch_sync(this->systemQueryQueue, ^{
+	//dispatch_sync(this->systemQueryQueue, ^{
 		struct passwd *uid = getpwuid(fileInfo->st_uid);
 		struct group *gid = getgrgid(fileInfo->st_gid);
 		sprintf(gidHeader, (char *) "%" PRIu64 " %s", (uint64_t) fileInfo->st_gid, gid->gr_name);
 		sprintf(uidHeader, (char *) "%" PRIu64 " %s", (uint64_t) fileInfo->st_uid, uid->pw_name);
-	});
+//	});
 
 	AmzHeaders *amzHeaders = new AmzHeaders();
 	if (this->makeAllPublic) {
@@ -380,7 +381,7 @@ int Uploader::uploadFileWithRetryAndStore(
 	char *remotePath, 
 	char *contentType, 
 	struct stat *fileInfo,
-	dispatch_queue_t sqlQueue, 
+	//dispatch_queue_t sqlQueue, 
 	char *errorResult
 ) {
 	uint32_t httpStatus=0;
@@ -395,9 +396,9 @@ int Uploader::uploadFileWithRetryAndStore(
 	}
 
 	if (httpStatus==200) {
-		__block int toReturn=0;
+		int toReturn=0;
 		if (strlen(remoteMd5)==32) {
-			dispatch_sync(sqlQueue, ^{
+			//dispatch_sync(sqlQueue, ^{
 				int sqlRes = fileListStorage->store(remotePath, remoteMd5, (uint32_t) fileInfo->st_mtime);
 				if (sqlRes==STORAGE_SUCCESS) {
 					toReturn = UPLOAD_SUCCESS;
@@ -405,7 +406,7 @@ int Uploader::uploadFileWithRetryAndStore(
 					sprintf(errorResult, "Oops, database error");
 					toReturn = UPLOAD_FAILED;
 				}
-			});
+			//});
 		} else { 
 			sprintf(errorResult, "Amazon did not return MD5");
 			toReturn = UPLOAD_FAILED;
@@ -419,6 +420,55 @@ int Uploader::uploadFileWithRetryAndStore(
 		free(remoteMd5);
 		return UPLOAD_FAILED;
 	}
+}
+
+struct ThreadCommand {
+	uint8_t threadNumber;
+	Uploader *self;
+	FileListStorage *fileListStorage;
+	char *realLocalPath;
+	char *path;
+	char *contentType;
+	struct stat *fileInfo;
+};
+
+void *uploader_runOverThreadFunc(void* a) {
+	struct ThreadCommand *threadCommand = (struct ThreadCommand *)a;
+	printf("Enter thread %d for path %s\n", threadCommand->threadNumber, threadCommand->path); fflush(stdout);
+	threadCommand->self->runOverThread(
+		threadCommand->threadNumber, 
+		threadCommand->fileListStorage,
+		threadCommand->realLocalPath,
+		threadCommand->path,
+		threadCommand->contentType,
+		threadCommand->fileInfo
+	);
+
+	printf("Thread %d for path %s done\n", threadCommand->threadNumber, threadCommand->path); fflush(stdout);
+
+	free(threadCommand->realLocalPath);
+	free(threadCommand->fileInfo);
+	free(a); // possible?
+	pthread_exit(NULL);
+}
+
+void Uploader::runOverThread(uint8_t threadNumber, FileListStorage *fileListStorage, char *realLocalPath, char *path, char *contentType, struct stat *fileInfo) {
+	char errorResult[1024*20];
+	errorResult[0]=0;
+
+	//printf("Enter into upload for %s\n", path); fflush(stdout);
+	int res = this->uploadFileWithRetryAndStore(
+		fileListStorage, realLocalPath, path, contentType, 
+		fileInfo,
+		errorResult
+	);
+	if (res==UPLOAD_FAILED) {
+		LOG(LOG_FATAL, "[Upload] FAIL %s: %s                  ", path, errorResult);
+		this->failed=1;
+	} else {
+		LOG(LOG_INFO, "[Upload] Uploaded %s              ", path);
+	}	
+	this->threads->markFree(threadNumber);
 }
 
 char *Uploader::createRealLocalPath(char *prefix, char *path) {
@@ -440,40 +490,48 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 	LOG(LOG_INFO, "[Upload] Total size of files: %s", hrSizeString);
 	free(hrSizeString);
 
-	dispatch_queue_t globalQueue = dispatch_get_global_queue(0, 0);
-	dispatch_queue_t sqlQueue = dispatch_queue_create("com.egorfine.db", NULL);
-	dispatch_group_t group = dispatch_group_create();
+	// dispatch_queue_t globalQueue = dispatch_get_global_queue(0, 0);
+	// dispatch_queue_t sqlQueue = dispatch_queue_create("com.egorfine.db", NULL);
+	// dispatch_group_t group = dispatch_group_create();
 	
-	dispatch_semaphore_t threadsCount = dispatch_semaphore_create(this->uploadThreads);
+	// dispatch_semaphore_t threadsCount = dispatch_semaphore_create(this->uploadThreads);
 
-	__block int failed=0;
+	this->failed=0;
+
+	this->threads = new Threads(10);
 
 	for (int i=0;i<files->count;i++) {
-		char *path = (files->paths[i]+1);
+		if (this->failed) {
+			break;
+		}
 
-		// we don't skip the storage file. We will just re upload it later.
+		char *path = (files->paths[i]+1);
 
 		char *realLocalPath = Uploader::createRealLocalPath(prefix, path);
 		
-		__block struct stat fileInfo;
-		if (lstat(realLocalPath, &fileInfo)<0) {
+		struct stat *fileInfo = (struct stat *) malloc(sizeof(struct stat));;
+
+		if (lstat(realLocalPath, fileInfo)<0) {
 			LOG(LOG_ERR, "[Upload] FAIL %s: Cannot open file: %s", path, strerror(errno));
 			free(realLocalPath);
+			free(fileInfo);
 			this->uploadedSize+=files->sizes[i];
 			continue;
 		}
 		
-		if (fileInfo.st_size==0) {
+		if (fileInfo->st_size==0) {
 			LOG(LOG_WARN, "[Upload] WARNING %s: Zero sized file, skipped", path);
 			free(realLocalPath);
+			free(fileInfo);
 			this->uploadedSize+=files->sizes[i];
 			continue;
 		}
 		
-		if (fileInfo.st_size>=MAX_S3_FILE_SIZE) {
+		if (fileInfo->st_size>=MAX_S3_FILE_SIZE) {
 			LOG(LOG_WARN, "[Upload] WARNING %s: File too large (%" PRIu64 " bytes while only %" PRIu64 " allowed), skipped", 
-				path, (uint64_t) fileInfo.st_size, (uint64_t) MAX_S3_FILE_SIZE);
+				path, (uint64_t) fileInfo->st_size, (uint64_t) MAX_S3_FILE_SIZE);
 			free(realLocalPath);
+			free(fileInfo);
 			this->uploadedSize+=files->sizes[i];
 			continue;
 		}
@@ -484,26 +542,53 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 		if (res!=STORAGE_SUCCESS) {
 			LOG(LOG_FATAL, "[Upload] FAIL %s: Oops, database query failed", path);
 			free(realLocalPath);
+			free(fileInfo);
 			return UPLOAD_FAILED;
 		}
 
-		if (res>0 && mtime == (uint64_t) fileInfo.st_mtime) {
-			LOG(LOG_INFO, "[Upload] %s not changed", path);
+		if (res>0 && mtime == (uint64_t) fileInfo->st_mtime) {
+			//LOG(LOG_INFO, "[Upload] %s not changed", path);
 			this->uploadedSize+=files->sizes[i];
+			free(fileInfo);
 			free(realLocalPath);
 			continue;
 		}
 		
-		char *contentType = guessContentType(path);
 
 		if (this->dryRun) {
-			LOG(LOG_INFO, "[Upload] [dry] Uploaded %s", path);
+			LOG(LOG_INFO, "[Upload] [dry] Uploaded %s                  ", path);
+			free(fileInfo);
 			free(realLocalPath);
 		} else { 
-			__block Uploader *self = this;
+			int threadNumber = threads->sleepTillThreadFree();
+			threads->markBusy(threadNumber);
+			printf("Thread %d marked busy\n", threadNumber); fflush(stdout);
+
+			struct ThreadCommand *threadCommand = (struct ThreadCommand *) malloc(sizeof(struct ThreadCommand));
+			threadCommand->self = this;
+			threadCommand->fileInfo = fileInfo; // FIXME leaking
+			threadCommand->contentType = guessContentType(path);
+			threadCommand->path = path;
+			threadCommand->realLocalPath = realLocalPath;// FIXME leak
+			threadCommand->fileListStorage = fileListStorage;
+			threadCommand->threadNumber = threadNumber;
+
+			pthread_t threadId;
+			int rc = pthread_create(&threadId, NULL, uploader_runOverThreadFunc, (void *)threadCommand);
+			threads->setThreadId(threadNumber, threadId);
+			if (rc) {
+				fprintf(stderr, "ERROR; return code from pthread_create() is %d\n", rc);
+				exit(-1);
+			}
+
+
+
+//			__block Uploader *self = this;
 		
-			dispatch_semaphore_wait(threadsCount, DISPATCH_TIME_FOREVER);
-			dispatch_group_async(group, globalQueue, ^{
+			// dispatch_semaphore_wait(threadsCount, DISPATCH_TIME_FOREVER);
+			// dispatch_group_async(group, globalQueue, ^{
+
+			/*
 				char errorResult[1024*100];
 				if (!failed) {
 					int res = self->uploadFileWithRetryAndStore(
@@ -513,29 +598,29 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 						errorResult
 					);
 					if (res==UPLOAD_FAILED) {
-						LOG(LOG_FATAL, "[Upload] FAIL %s: %s", path, errorResult);
+						LOG(LOG_FATAL, "[Upload] FAIL %s: %s                  ", path, errorResult);
 						failed=1;
 					} else {
-						LOG(LOG_INFO, "[Upload] Uploaded %s", path);
+						LOG(LOG_INFO, "[Upload] Uploaded %s              ", path);
 					}
 				}
 				
-				free(realLocalPath);
+				free(realLocalPath);*/
 				
-				dispatch_semaphore_signal(threadsCount);
-			});
-			if (failed) {
-				break;
-			}
-			dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
+			// 	dispatch_semaphore_signal(threadsCount);
+			// });
+			// dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
 		}
 	}
 
-	LOG(LOG_INFO, "[Upload] Finished %s", failed ? "with errors" : "successfully");
+	threads->sleepTillAllThreadsFree();
+	delete this->threads;
+
+	LOG(LOG_INFO, "[Upload] Finished %s                     ", this->failed ? "with errors" : "successfully");
 
 	delete files;
 
-	return failed ? UPLOAD_FAILED : UPLOAD_SUCCESS;
+	return this->failed ? UPLOAD_FAILED : UPLOAD_SUCCESS;
 }
 
 int Uploader::uploadDatabase(char *databasePath, char *databaseFilename) { 

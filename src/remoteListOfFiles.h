@@ -10,12 +10,16 @@ using namespace std;
 #include <stdint.h>
 #include <errno.h>
 #include "amazonCredentials.h"
+#include "threads.h"
+
 
 class RemoteListOfFiles
 {
 private:
 	AmazonCredentials *amazonCredentials;
 	uint32_t allocCount;
+	Threads *threads;
+	int failed;
 
 	static char *extractMd5FromEtag(char *etag);
 	static uint32_t extractMtimeFromHeaders(char *headers);
@@ -33,6 +37,8 @@ public:
 	int resolveMtimes();
 
 	int checkAuth();
+	void runOverThread(int threadNumber, int pos);
+
 
 	char **paths;
 	char **md5s;

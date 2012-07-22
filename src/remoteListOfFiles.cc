@@ -21,6 +21,7 @@ extern "C" {
 
 #include "remoteListOfFiles.h"
 #include "amazonCredentials.h"
+#include "threads.h"
 #include "settings.h"
 
 RemoteListOfFiles::RemoteListOfFiles(AmazonCredentials *amazonCredentials) {
@@ -30,6 +31,7 @@ RemoteListOfFiles::RemoteListOfFiles(AmazonCredentials *amazonCredentials) {
 	this->mtimes = (uint32_t *) malloc(sizeof(uint32_t) * 100);
 	this->count = 0;
 	this->allocCount = 100;
+	this->failed=0;
 
 	this->showProgress=0;
 	this->useSsl=1;
@@ -408,24 +410,89 @@ int RemoteListOfFiles::performHeadOnFile(char *remotePath, uint32_t *remoteMtime
 }
 
 
+struct ThreadCommand {
+	RemoteListOfFiles *self;
+	int threadNumber;
+	int pos;
+};
+
+
+void *remoteListOfFiles_runOverThreadFunc(void* a) {
+	struct ThreadCommand *threadCommand = (struct ThreadCommand *)a;
+	threadCommand->self->runOverThread(threadCommand->threadNumber, threadCommand->pos);
+
+	printf("Thread %d done\n", threadCommand->threadNumber); fflush(stdout);
+
+	free(a); // possible
+	pthread_exit(NULL);
+}
+
+void RemoteListOfFiles::runOverThread(int threadNumber, int pos) {
+	if (!this->failed) {
+		char errorResult[1024*100];
+		errorResult[0]=0;
+		uint32_t mtime=0, statusCode=0;
+
+		int res = this->performHeadOnFile(this->paths[pos], &mtime, &statusCode, errorResult);
+		if (res==HEAD_FAILED) {
+			LOG(LOG_FATAL, "[MetaUpdate] FAIL %s: %s", this->paths[pos], errorResult);
+			this->failed=1;
+			this->threads->markFree(threadNumber);
+			return;
+		}
+
+		if (statusCode!=200) {
+			LOG(LOG_FATAL, "[MetaUpdate] FAIL %s: HTTP status=%d", this->paths[pos], statusCode);
+			this->failed=1;
+			this->threads->markFree(threadNumber);
+			return;
+		}
+
+		this->mtimes[pos] = mtime;
+		double percent = (double) pos / (double) this->count;
+
+		if (this->showProgress) {
+			printf("\r[MetaUpdate] Updated %.1f%% (%u files out of %u)     \r", percent*100, (uint32_t) pos, this->count);
+		}
+		LOG(LOG_INFO, "[MetaUpdate] updated %s", this->paths[pos]);
+	}
+
+	this->threads->markFree(threadNumber);
+}
+
 int RemoteListOfFiles::resolveMtimes() {
 	uint32_t i;
 	for (i=0;i<this->count;i++) {
 		(this->mtimes)[i]=0;
 	}
 	
-	dispatch_queue_t globalQueue = dispatch_get_global_queue(0, 0);
-	dispatch_group_t group = dispatch_group_create();
+	// dispatch_queue_t globalQueue = dispatch_get_global_queue(0, 0);
+	// dispatch_group_t group = dispatch_group_create();
 	
-	dispatch_semaphore_t threadsCount = dispatch_semaphore_create(50);
+	// dispatch_semaphore_t threadsCount = dispatch_semaphore_create(50);
 	
-	__block int failed = 0;
-
-	__block RemoteListOfFiles *self = this;
+	this->threads = new Threads(50);
 
 	for (i=0;i<this->count; i++) {
-		dispatch_semaphore_wait(threadsCount, DISPATCH_TIME_FOREVER);
+		int threadNumber = threads->sleepTillThreadFree();
+		threads->markBusy(threadNumber);
+		printf("Thread %d marked bysy\n", threadNumber); fflush(stdout);
 		
+		// FIXME leaking
+		struct ThreadCommand *threadCommand = (struct ThreadCommand *) malloc(sizeof(struct ThreadCommand));
+		threadCommand->threadNumber = threadNumber;
+		threadCommand->pos = i;
+		threadCommand->self = this;
+
+		pthread_t threadId;
+		int rc = pthread_create(&threadId, NULL, remoteListOfFiles_runOverThreadFunc, (void *)threadCommand);
+		threads->setThreadId(threadNumber, threadId);
+		if (rc) {
+			fprintf(stderr, "ERROR; return code from pthread_create() is %d\n", rc);
+			exit(-1);
+		}
+
+/*
 		dispatch_group_async(group, globalQueue, ^{
 			if (!failed) {
 				char errorResult[1024*100] = "";
@@ -456,24 +523,22 @@ int RemoteListOfFiles::resolveMtimes() {
 			}
 
 			dispatch_semaphore_signal(threadsCount);							
-		});
+		});*/
 
-		if (failed) {
+		if (this->failed) {
 			break;
 		}
 	}
 
-	dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
+	threads->sleepTillAllThreadsFree();
 
-	if (!failed) {
+	delete this->threads;
+
+	if (!this->failed) {
 		LOG(LOG_INFO, "[MetaUpdate] All %d files updated", i);
 	}
 	
-	fflush(stdout);
-
-	dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
-
-	return failed ? LIST_FAILED : LIST_SUCCESS;
+	return this->failed ? LIST_FAILED : LIST_SUCCESS;
 }
 
 int RemoteListOfFiles::checkAuth() {
