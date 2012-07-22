@@ -14,17 +14,17 @@ extern "C" {
 }
 
 AmazonCredentials::AmazonCredentials(char *accessKeyId, char *secretAccessKey, char *bucket, char *endPoint) {
-	this->accessKeyId = strdup(accessKeyId);
-	this->secretAccessKey = strdup(secretAccessKey);
-	this->bucket = strdup(bucket);
-	this->endPoint = strdup(endPoint);
+	this->accessKeyId = accessKeyId;
+	this->secretAccessKey = secretAccessKey;
+	this->bucket = bucket;
+	this->endPoint = endPoint;
 }
 
 AmazonCredentials::~AmazonCredentials() {
-	free(this->accessKeyId);
-	free(this->secretAccessKey);
-	free(this->bucket);
-	free(this->endPoint);
+	this->accessKeyId=NULL;
+	this->secretAccessKey=NULL;
+	this->bucket=NULL;
+	this->endPoint=NULL;
 }
 
 char *AmazonCredentials::generateUrl(char *remotePath, int useSsl) {
