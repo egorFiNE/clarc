@@ -40,6 +40,7 @@ char *guessContentType(char *filename) {
 
 	dotPos++;
 	char *lowcaseExtension = (char *) malloc(strlen(filename));
+	lowcaseExtension[0]=0;
 	strcpy(lowcaseExtension, dotPos);
 
 	uint32_t i;
