@@ -57,7 +57,7 @@ uint32_t RemoteListOfFiles::extractMtimeFromHeaders(char *headers) {
 	char *str = strstr(headers, "x-amz-meta-mtime: ");
 	if (str) { 
 		char another[11];
-		bzero(another, 11);
+		another[0]=0;
 		strncpy(another, (str+18), 10);
 		return (uint32_t) atoll(another);
 	}

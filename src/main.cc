@@ -99,7 +99,7 @@ int validateEndpoint(char *endPoint) {
 char *buildDatabaseFilePath(char *databaseFilename, char *databasePath) {
 	uint64_t len = strlen(databasePath)+strlen(databaseFilename)+2;
 	char *databaseFilePath = (char *) malloc(len);
-	bzero(databaseFilePath, len);
+	databaseFilePath[0]=0;
 	strcat(databaseFilePath, databasePath);
 	strcat(databaseFilePath, "/");
 	strcat(databaseFilePath, databaseFilename);
