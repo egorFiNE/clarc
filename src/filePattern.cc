@@ -10,7 +10,7 @@ using namespace std;
 
 FilePattern::FilePattern() {
 	this->count=0;
-	this->size=1000;
+	this->size=100;
 	this->patterns = (RE2 **) malloc(sizeof(RE2 *)*this->size); 
 }
 
