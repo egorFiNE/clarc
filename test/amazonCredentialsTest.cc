@@ -20,11 +20,11 @@ extern "C" {
 AmazonCredentials *amazonCredentials;
 
 void AmazonCredentials_setup(void) {
-  amazonCredentials = new AmazonCredentials(
-  	"AKIAIOSFODNN7EXAMPLE", 
-  	"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-  	"bucket", "end-point"
-  );
+	amazonCredentials = new AmazonCredentials(
+		"AKIAIOSFODNN7EXAMPLE", 
+		"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+		"bucket", "end-point"
+	);
 }
 
 void AmazonCredentials_teardown(void) {

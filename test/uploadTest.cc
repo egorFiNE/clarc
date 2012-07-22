@@ -23,11 +23,11 @@ Uploader *uploader;
 AmazonCredentials *Upload_amazonCredentials;
 
 void Upload_setup(void) {
-  Upload_amazonCredentials = new AmazonCredentials(
-  	"AKIAIOSFODNN7EXAMPLE", 
-  	"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-  	"bucket", "end-point"
-  );
+	Upload_amazonCredentials = new AmazonCredentials(
+		"AKIAIOSFODNN7EXAMPLE", 
+		"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+		"bucket", "end-point"
+	);
 }
 
 void Upload_teardown(void) {

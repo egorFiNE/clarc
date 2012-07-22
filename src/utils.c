@@ -8,12 +8,12 @@
 #include "hmac.h"
 
 char *getIsoDate() {
-  time_t rawtime;
-  time(&rawtime);
-  struct tm *timeinfo;
-  timeinfo = gmtime (&rawtime);
-  char *date = (char *)malloc(64);
-  date[0]=0;
+	time_t rawtime;
+	time(&rawtime);
+	struct tm *timeinfo;
+	timeinfo = gmtime (&rawtime);
+	char *date = (char *)malloc(64);
+	date[0]=0;
 	strftime(date, 1024, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
 	return date;
 }
@@ -45,7 +45,7 @@ char *guessContentType(char *filename) {
 
 	uint32_t i;
 	for(i = 0; i<strlen(lowcaseExtension); i++) {
-  	lowcaseExtension[i]=tolower(lowcaseExtension[i]);
+		lowcaseExtension[i]=tolower(lowcaseExtension[i]);
 	}
 
 	// FIXME this is ugly

@@ -23,11 +23,11 @@ RemoteListOfFiles *remoteListOfFiles;
 AmazonCredentials *remoteListOfFiles_amazonCredentials;
 
 void RemoteListOfFiles_setup(void) {
-  remoteListOfFiles_amazonCredentials = new AmazonCredentials(
-  	"AKIAIOSFODNN7EXAMPLE", 
-  	"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-  	"bucket", "end-point"
-  );
+	remoteListOfFiles_amazonCredentials = new AmazonCredentials(
+		"AKIAIOSFODNN7EXAMPLE", 
+		"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+		"bucket", "end-point"
+	);
 	remoteListOfFiles = new RemoteListOfFiles(remoteListOfFiles_amazonCredentials);
 }
 
@@ -115,11 +115,11 @@ START_TEST(RemoteListOfFiles_parseSecondXML) {
 	uint8_t isTruncated=0;
 	int res;
 
-  remoteListOfFiles_amazonCredentials = new AmazonCredentials(
-  	"AKIAIOSFODNN7EXAMPLE", 
-  	"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-  	"bucket", "end-point"
-  );
+	remoteListOfFiles_amazonCredentials = new AmazonCredentials(
+		"AKIAIOSFODNN7EXAMPLE", 
+		"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+		"bucket", "end-point"
+	);
 	remoteListOfFiles = new RemoteListOfFiles(remoteListOfFiles_amazonCredentials);
 
 	char *xml = readXml(0);

@@ -6,10 +6,10 @@
 #include <stdint.h>
 
 struct CurlResponse {
-  char *body;
-  uint64_t bodySize;
-  char *headers;
-  uint64_t headersSize;
+	char *body;
+	uint64_t bodySize;
+	char *headers;
+	uint64_t headersSize;
 };
 
 void CurlResponseInit(struct CurlResponse *curlResponse);

@@ -56,8 +56,8 @@ struct curl_slist *AmzHeaders::serializeIntoCurl(struct curl_slist *slist) {
 	char value[1024*10];
 	for (int i=0;i<this->count;i++) {
 		sprintf(value, "%s: %s", this->names[i], this->values[i]);
-  	slist2 = curl_slist_append(slist2, value);
-  }
+		slist2 = curl_slist_append(slist2, value);
+	}
 
-  return slist2;
+	return slist2;
 }

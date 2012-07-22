@@ -178,7 +178,7 @@ int RemoteListOfFiles::performGetOnBucket(char *marker, int setLocationHeader, c
 
 	char *date = getIsoDate(); 
 
-  CURL *curl = curl_easy_init();
+	CURL *curl = curl_easy_init();
 
 	char canonicalizedResource[102400];
 	sprintf(canonicalizedResource, "/%s/", amazonCredentials->bucket);
@@ -192,76 +192,76 @@ int RemoteListOfFiles::performGetOnBucket(char *marker, int setLocationHeader, c
 	char *authorization = amazonCredentials->createAuthorizationHeader(stringToSign); 
 	if (authorization == NULL) {
 		free(date);
-	  curl_easy_cleanup(curl);		
+		curl_easy_cleanup(curl);		
 		strcpy(errorResult, "Error in auth module");
 		return LIST_FAILED;
 	}
 
-  char *url = amazonCredentials->generateUrl((char *) "", this->useSsl);
-  if (marker && strlen(marker) > 0) {
-  	strcat(url, "?marker=");
-  	strcat(url, marker);
-  } else if (setLocationHeader) {
-  	strcat(url, "?location");
-  }
+	char *url = amazonCredentials->generateUrl((char *) "", this->useSsl);
+	if (marker && strlen(marker) > 0) {
+		strcat(url, "?marker=");
+		strcat(url, marker);
+	} else if (setLocationHeader) {
+		strcat(url, "?location");
+	}
 
-  struct CurlResponse curlResponse;
-  CurlResponseInit(&curlResponse);
+	struct CurlResponse curlResponse;
+	CurlResponseInit(&curlResponse);
 
-  curl_easy_setopt(curl, CURLOPT_URL, url);
-  LOG(LOG_DBG, "[File list] GET %s", url);
-  free(url);
+	curl_easy_setopt(curl, CURLOPT_URL, url);
+	LOG(LOG_DBG, "[File list] GET %s", url);
+	free(url);
 
-  struct curl_slist *slist = NULL;
+	struct curl_slist *slist = NULL;
 
 	char dateHeader[1024];
 	sprintf(dateHeader, "Date: %s", date);
-  slist = curl_slist_append(slist, dateHeader);
-  free(date);
+	slist = curl_slist_append(slist, dateHeader);
+	free(date);
 
-  char authorizationHeader[1024];
-  sprintf(authorizationHeader, "Authorization: %s", authorization);
-  slist = curl_slist_append(slist, authorizationHeader);
-  free(authorization);
+	char authorizationHeader[1024];
+	sprintf(authorizationHeader, "Authorization: %s", authorization);
+	slist = curl_slist_append(slist, authorizationHeader);
+	free(authorization);
 
-  curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
-  curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
-  
+	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
+	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+
 	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, this->connectTimeout);
 	curl_easy_setopt(curl, CURLOPT_MAXCONNECTS, MAXCONNECTS);
 	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->networkTimeout);
 	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, LOW_SPEED_LIMIT);
 
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&curlResponse);
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlResponseBodyCallback);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&curlResponse);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlResponseBodyCallback);
 
 	curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, &CurlResponseHeadersCallback);
 	curl_easy_setopt(curl, CURLOPT_WRITEHEADER, (void *)&curlResponse); 
 
 	CURLcode res = curl_easy_perform(curl);
 
-  curl_slist_free_all(slist);
+	curl_slist_free_all(slist);
 
 	*statusCode = 0;
 
 	if (res==CURLE_OK) {
 		long httpStatus = 0;
 		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpStatus);
-	  *statusCode = (uint32_t) httpStatus;
+		*statusCode = (uint32_t) httpStatus;
 
 		memcpy(body, curlResponse.body, curlResponse.bodySize);
 		*bodySize = (uint64_t) curlResponse.bodySize;
 
-	  curl_easy_cleanup(curl);
+		curl_easy_cleanup(curl);
 		CurlResponseFree(&curlResponse);
 
 		return LIST_SUCCESS;
 
 	} else { 
 		strcpy(errorResult, "Error performing request");
-	  curl_easy_cleanup(curl);
-	  CurlResponseFree(&curlResponse);
-	  return LIST_FAILED;
+		curl_easy_cleanup(curl);
+		CurlResponseFree(&curlResponse);
+		return LIST_FAILED;
 	}
 }
 
@@ -326,7 +326,7 @@ int RemoteListOfFiles::performHeadOnFile(char *remotePath, uint32_t *remoteMtime
 
 	char *date = getIsoDate(); 
 
-  CURL *curl = curl_easy_init();
+	CURL *curl = curl_easy_init();
 
 	char *escapedRemotePath=curl_easy_escape(curl, remotePath, 0);
 	char canonicalizedResource[102400];
@@ -340,59 +340,59 @@ int RemoteListOfFiles::performHeadOnFile(char *remotePath, uint32_t *remoteMtime
 		strcpy(errorResult, "Error in auth module");
 		free(date);
 		free(escapedRemotePath);
-	  curl_easy_cleanup(curl);
+		curl_easy_cleanup(curl);
 		return HEAD_FAILED;
 	}
 
-  char *url = amazonCredentials->generateUrl(escapedRemotePath, this->useSsl); 
+	char *url = amazonCredentials->generateUrl(escapedRemotePath, this->useSsl); 
 
-  struct CurlResponse curlResponse;
-  CurlResponseInit(&curlResponse);
+	struct CurlResponse curlResponse;
+	CurlResponseInit(&curlResponse);
 
-  curl_easy_setopt(curl, CURLOPT_URL, url);
-  free(url);
+	curl_easy_setopt(curl, CURLOPT_URL, url);
+	free(url);
 
-  struct curl_slist *slist = NULL;
+	struct curl_slist *slist = NULL;
 
 	char dateHeader[1024];
 	sprintf(dateHeader, "Date: %s", date);
-  slist = curl_slist_append(slist, dateHeader);
-  free(date);
+	slist = curl_slist_append(slist, dateHeader);
+	free(date);
 
-  char authorizationHeader[1024];
-  sprintf(authorizationHeader, "Authorization: %s", authorization);
-  slist = curl_slist_append(slist, authorizationHeader);
-  free(authorization);
+	char authorizationHeader[1024];
+	sprintf(authorizationHeader, "Authorization: %s", authorization);
+	slist = curl_slist_append(slist, authorizationHeader);
+	free(authorization);
 
-  curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
-  curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
-  curl_easy_setopt(curl, CURLOPT_NOBODY, 1);
-  
+	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
+	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+	curl_easy_setopt(curl, CURLOPT_NOBODY, 1);
+
 	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, this->connectTimeout);
 	curl_easy_setopt(curl, CURLOPT_MAXCONNECTS, MAXCONNECTS);
 	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->networkTimeout);
 	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, LOW_SPEED_LIMIT);
 
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&curlResponse);
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlResponseBodyCallback);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&curlResponse);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlResponseBodyCallback);
 
 	curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, &CurlResponseHeadersCallback);
 	curl_easy_setopt(curl, CURLOPT_WRITEHEADER, (void *)&curlResponse); 
 
 	CURLcode res = curl_easy_perform(curl);
 
-  curl_slist_free_all(slist);
+	curl_slist_free_all(slist);
 
 	*statusCode = 0;
 
 	if (res==CURLE_OK) {
 		long httpStatus = 0;
 		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpStatus);
-	  *statusCode = (uint32_t) httpStatus;
+		*statusCode = (uint32_t) httpStatus;
 
 		*remoteMtime = RemoteListOfFiles::extractMtimeFromHeaders(curlResponse.headers);
 
-	  curl_easy_cleanup(curl);
+		curl_easy_cleanup(curl);
 		CurlResponseFree(&curlResponse);
 
 		return HEAD_SUCCESS;
@@ -400,10 +400,10 @@ int RemoteListOfFiles::performHeadOnFile(char *remotePath, uint32_t *remoteMtime
 	} else { 
 		strcpy(errorResult, "Error performing request");
 
-	  curl_easy_cleanup(curl);
-	  CurlResponseFree(&curlResponse);
+		curl_easy_cleanup(curl);
+		CurlResponseFree(&curlResponse);
 
-	  return HEAD_FAILED;
+		return HEAD_FAILED;
 	}
 }
 

@@ -11,7 +11,7 @@ using namespace std;
 FilePattern::FilePattern() {
 	this->count=0;
 	this->size=1000;
-	this->patterns =  (RE2 **) malloc(sizeof(RE2 *)*this->size); 
+	this->patterns = (RE2 **) malloc(sizeof(RE2 *)*this->size); 
 }
 
 FilePattern::~FilePattern() {
@@ -42,7 +42,7 @@ int FilePattern::readFile(char *filename) {
 int FilePattern::add(char *pattern) {
 	if (this->count==this->size) {
 	 	this->size+=100;
-		this->patterns =  (RE2 **) realloc(this->patterns, sizeof(RE2 *)*this->size); 
+		this->patterns = (RE2 **) realloc(this->patterns, sizeof(RE2 *)*this->size); 
 	}
 
 	RE2 *re = new RE2(pattern);

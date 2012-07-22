@@ -39,14 +39,14 @@ char *AmazonCredentials::generateUrl(char *remotePath, int useSsl) {
 
 	char *resultUrl = (char *) malloc(strlen(this->bucket) + strlen(this->endPoint) + strlen(remotePathToUse) + 32);
 	resultUrl[0]=0; 
-  sprintf(resultUrl, "%s://%s.%s/%s", useSsl?"https":"http", this->bucket, this->endPoint, remotePathToUse);
-  return resultUrl;
+	sprintf(resultUrl, "%s://%s.%s/%s", useSsl?"https":"http", this->bucket, this->endPoint, remotePathToUse);
+	return resultUrl;
 }
 
 int AmazonCredentials::sign(char *result, char *stringToSign) {
 	// char *key = strdup(this->secretAccessKey); was needed for something
 	char resultBinary[64];
-	int res =  hmac_sha1(this->secretAccessKey, strlen(this->secretAccessKey), stringToSign, strlen(stringToSign), resultBinary);
+	int res = hmac_sha1(this->secretAccessKey, strlen(this->secretAccessKey), stringToSign, strlen(stringToSign), resultBinary);
 	if (res==0) {
 		base64_encode((char *)resultBinary, 20, result, 64);
 		return 1;

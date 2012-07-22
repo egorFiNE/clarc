@@ -60,7 +60,7 @@ void LocalFileList::recurseIn(char *path, char *prefix) {
 
 	DIR *dirp = opendir(toOpen);
 
-  struct dirent *dp = NULL;
+	struct dirent *dp = NULL;
 	while ((dp = readdir(dirp))) {
 		if (dp->d_type == DT_REG) {
 			uint64_t len = (strlen(path)+strlen(dp->d_name)+2);

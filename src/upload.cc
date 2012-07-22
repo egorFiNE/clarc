@@ -94,28 +94,28 @@ void Uploader::extractLocationFromHeaders(char *headers, char *locationResult) {
 	if (!headers) {
 		return;
 	}
-  char *locationPointer = strstr(headers, "Location: ");
-  if (locationPointer) {
-  	locationPointer+=10;
+	char *locationPointer = strstr(headers, "Location: ");
+	if (locationPointer) {
+		locationPointer+=10;
 
-  	if (strlen(locationPointer)<=0) {
-  		return;
-  	}
+		if (strlen(locationPointer)<=0) {
+			return;
+		}
 
-  	char *endPointer = locationPointer;
-  	while (*endPointer!=0 && *endPointer!='\n' && *endPointer!='\r') {
-  		endPointer++;
-  	}
+		char *endPointer = locationPointer;
+		while (*endPointer!=0 && *endPointer!='\n' && *endPointer!='\r') {
+			endPointer++;
+		}
 
-    if (endPointer==locationPointer) {
-    	return;
-    }
+		if (endPointer==locationPointer) {
+			return;
+		}
 
-    int len = endPointer-locationPointer;
+		int len = endPointer-locationPointer;
 
-    strncpy(locationResult, locationPointer, len);
-    locationResult[len]=0;
-  }
+		strncpy(locationResult, locationPointer, len);
+		locationResult[len]=0;
+	}
 }
 
 
@@ -151,7 +151,7 @@ CURLcode Uploader::uploadFile(
 ) {
 	char method[4] = "PUT";
 
-	FILE *fin = fopen(localPath, "rb");  
+	FILE *fin = fopen(localPath, "rb");
 	if (!fin) {
 		sprintf(errorResult, "Cannot open file %s: %s", localPath, strerror(errno));
 		return UPLOAD_FILE_FUNCTION_FAILED;
@@ -159,7 +159,7 @@ CURLcode Uploader::uploadFile(
 
 	char *date = getIsoDate();
 
-  CURL *curl = curl_easy_init();
+	CURL *curl = curl_easy_init();
 	char *escapedRemotePath=curl_easy_escape(curl, remotePath, 0);
 
 	char *canonicalizedResource=(char *)malloc(strlen(amazonCredentials->bucket) + strlen(escapedRemotePath) + 4);
@@ -170,11 +170,11 @@ CURLcode Uploader::uploadFile(
 
 	// I believe this is only needed for Linux, as I have seen it failing when called in multiple threads.
 	// -- EE
-  dispatch_sync(this->systemQueryQueue, ^{
+	dispatch_sync(this->systemQueryQueue, ^{
 		struct passwd *uid = getpwuid(fileInfo->st_uid);
 		struct group *gid = getgrgid(fileInfo->st_gid);
 		sprintf(gidHeader, (char *) "%" PRIu64 " %s", (uint64_t) fileInfo->st_gid, gid->gr_name);
-  	sprintf(uidHeader, (char *) "%" PRIu64 " %s", (uint64_t) fileInfo->st_uid, uid->pw_name);
+		sprintf(uidHeader, (char *) "%" PRIu64 " %s", (uint64_t) fileInfo->st_uid, uid->pw_name);
 	});
 
 	AmzHeaders *amzHeaders = new AmzHeaders();
@@ -210,7 +210,7 @@ CURLcode Uploader::uploadFile(
 
 	if (authorization==NULL) {
 		free(date);
-	  curl_easy_cleanup(curl);
+		curl_easy_cleanup(curl);
 		free(escapedRemotePath);
 		strcpy(errorResult, "Error in auth");
 		return UPLOAD_FILE_FUNCTION_FAILED;
@@ -220,108 +220,108 @@ CURLcode Uploader::uploadFile(
 	if (url) {
 		postUrl = strdup(url);
 	} else { 
-	  postUrl = amazonCredentials->generateUrl(escapedRemotePath, this->useSsl); 
+		postUrl = amazonCredentials->generateUrl(escapedRemotePath, this->useSsl); 
 	}
 	free(escapedRemotePath);
 
-  struct CurlResponse curlResponse;
-  CurlResponseInit(&curlResponse);
+	struct CurlResponse curlResponse;
+	CurlResponseInit(&curlResponse);
 
-  curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
-  curl_easy_setopt(curl, CURLOPT_PUT, 1L);
-  //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+	curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+	curl_easy_setopt(curl, CURLOPT_PUT, 1L);
+	//curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
 
-  curl_easy_setopt(curl, CURLOPT_URL, postUrl);
+	curl_easy_setopt(curl, CURLOPT_URL, postUrl);
 	free(postUrl);
 
-  curl_easy_setopt(curl, CURLOPT_READDATA, fin);
+	curl_easy_setopt(curl, CURLOPT_READDATA, fin);
 
-  struct curl_slist *slist = NULL;
+	struct curl_slist *slist = NULL;
 
 	char dateHeader[128];
 	sprintf(dateHeader, "Date: %s", date);
-  slist = curl_slist_append(slist, dateHeader);
+	slist = curl_slist_append(slist, dateHeader);
 	free(date);
 
-  char authorizationHeader[128];
-  sprintf(authorizationHeader, "Authorization: %s", authorization);
-  slist = curl_slist_append(slist, authorizationHeader);
-  free(authorization);
+	char authorizationHeader[128];
+	sprintf(authorizationHeader, "Authorization: %s", authorization);
+	slist = curl_slist_append(slist, authorizationHeader);
+	free(authorization);
 
-  char contentTypeHeader[128];
-  sprintf(contentTypeHeader, "Content-Type: %s", contentType);
-  slist = curl_slist_append(slist, contentTypeHeader);
+	char contentTypeHeader[128];
+	sprintf(contentTypeHeader, "Content-Type: %s", contentType);
+	slist = curl_slist_append(slist, contentTypeHeader);
 
-  slist = curl_slist_append(slist, "Expect:");
+	slist = curl_slist_append(slist, "Expect:");
 
-  slist = amzHeaders->serializeIntoCurl(slist);
-  delete amzHeaders;
+	slist = amzHeaders->serializeIntoCurl(slist);
+	delete amzHeaders;
 
-  curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
-  curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
+	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
 
 	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, this->connectTimeout);
 	curl_easy_setopt(curl, CURLOPT_MAXCONNECTS, MAXCONNECTS);
 	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->networkTimeout);
 	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, LOW_SPEED_LIMIT);
 
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&curlResponse);
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlResponseBodyCallback);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&curlResponse);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlResponseBodyCallback);
 
 	curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, &CurlResponseHeadersCallback);
 	curl_easy_setopt(curl, CURLOPT_WRITEHEADER, (void *)&curlResponse); 
 
 	struct UploadProgress *uploadProgress = (struct UploadProgress *)malloc(sizeof(struct UploadProgress));
 	uploadProgress->path = remotePath;
-	uploadProgress->ullast  = 0;
+	uploadProgress->ullast = 0;
 	uploadProgress->uploader = this;
 	curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, &progressFunction);
 	curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, (void *) uploadProgress);
 	curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0);
 
-  curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t) fileInfo->st_size);
+	curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t) fileInfo->st_size);
 
-  char *curlErrors = (char *) malloc(CURL_ERROR_SIZE);
-  curlErrors[0]=0;
-  curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, curlErrors);
+	char *curlErrors = (char *) malloc(CURL_ERROR_SIZE);
+	curlErrors[0]=0;
+	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, curlErrors);
 
 	CURLcode res = curl_easy_perform(curl);
 
-  fclose(fin); 
+	fclose(fin); 
 
-  curl_slist_free_all(slist);
+	curl_slist_free_all(slist);
 	free(uploadProgress);
 
-  *md5=0;
-  *httpStatusCode = 0;
+	*md5=0;
+	*httpStatusCode = 0;
 
 	if (res==CURLE_OK) {
 		this->progress(remotePath, 0, (double) fileInfo->st_size, (double) fileInfo->st_size);
 
 		long _httpStatus = 0;
 		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &_httpStatus);
-	  *httpStatusCode = (uint32_t) _httpStatus;
+		*httpStatusCode = (uint32_t) _httpStatus;
 
-	  if (_httpStatus==307) {
-		  Uploader::extractLocationFromHeaders(curlResponse.headers, errorResult);
-	  } else if (_httpStatus==200) { 
-		  Uploader::extractMD5FromETagHeaders(curlResponse.headers, md5);
-	  }
+		if (_httpStatus==307) {
+			Uploader::extractLocationFromHeaders(curlResponse.headers, errorResult);
+		} else if (_httpStatus==200) { 
+			Uploader::extractMD5FromETagHeaders(curlResponse.headers, md5);
+		}
 
-	  curl_easy_cleanup(curl);
-	  free(curlErrors);
-	  CurlResponseFree(&curlResponse);
+		curl_easy_cleanup(curl);
+		free(curlErrors);
+		CurlResponseFree(&curlResponse);
 
-	  return CURLE_OK;
+		return CURLE_OK;
 
 	} else { 
 		strcpy(errorResult, curlErrors);
 
-	  curl_easy_cleanup(curl);
-	  free(curlErrors);
-	  CurlResponseFree(&curlResponse);
+		curl_easy_cleanup(curl);
+		free(curlErrors);
+		CurlResponseFree(&curlResponse);
 
-	  return res;
+		return res;
 	}
 }
 
@@ -397,8 +397,7 @@ int Uploader::uploadFileWithRetryAndStore(
 	if (httpStatus==200) {
 		__block int toReturn=0;
 		if (strlen(remoteMd5)==32) {
-
-	    dispatch_sync(sqlQueue, ^{
+			dispatch_sync(sqlQueue, ^{
 				int sqlRes = fileListStorage->store(remotePath, remoteMd5, (uint32_t) fileInfo->st_mtime);
 				if (sqlRes==STORAGE_SUCCESS) {
 					toReturn = UPLOAD_SUCCESS;
@@ -415,7 +414,7 @@ int Uploader::uploadFileWithRetryAndStore(
 		free(remoteMd5);
 		return toReturn;
 		
-	}	else {
+	} else {
 		sprintf(errorResult, "Amazon returned HTTP status %d", httpStatus);
 		free(remoteMd5);
 		return UPLOAD_FAILED;
@@ -436,7 +435,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 	__block LocalFileList *files = new LocalFileList(this->excludeFilePattern);
 	files->recurseIn((char *) "", prefix);
 
-	this->totalSize =  files->calculateTotalSize();
+	this->totalSize = files->calculateTotalSize();
 	char *hrSizeString = hrSize(this->totalSize);
 	LOG(LOG_INFO, "[Upload] Total size of files: %s", hrSizeString);
 	free(hrSizeString);

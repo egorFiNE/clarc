@@ -78,28 +78,28 @@ int FileListStorage::lookup(char *remotePath, char *md5, uint64_t *mtime) {
 		return STORAGE_FAILED;
 	} 
 	
-  if (sqlite3_bind_text(selectFileStmt, 1, remotePath, (int) strlen(remotePath), SQLITE_STATIC) != SQLITE_OK) {
+	if (sqlite3_bind_text(selectFileStmt, 1, remotePath, (int) strlen(remotePath), SQLITE_STATIC) != SQLITE_OK) {
 		sqlite3_finalize(selectFileStmt);
-  	return STORAGE_FAILED;
-  }
+		return STORAGE_FAILED;
+	}
 
-  int s = sqlite3_step(selectFileStmt);
-  if (s == SQLITE_ROW) {
-  	char *a = (char *)sqlite3_column_text(selectFileStmt, 0);
-  	strcpy(md5, a);
+	int s = sqlite3_step(selectFileStmt);
+	if (s == SQLITE_ROW) {
+		char *a = (char *)sqlite3_column_text(selectFileStmt, 0);
+		strcpy(md5, a);
 
-    *mtime = (uint64_t) sqlite3_column_int64(selectFileStmt, 1);
-		
+		*mtime = (uint64_t) sqlite3_column_int64(selectFileStmt, 1);
+
 		sqlite3_finalize(selectFileStmt);
-    return STORAGE_SUCCESS;
+		return STORAGE_SUCCESS;
 
-  } else if (s==SQLITE_DONE) {
+	} else if (s==SQLITE_DONE) {
 		sqlite3_finalize(selectFileStmt);
-	  return STORAGE_SUCCESS;
-  }
+		return STORAGE_SUCCESS;
+	}
 
 	sqlite3_finalize(selectFileStmt);
-  return STORAGE_FAILED;
+	return STORAGE_FAILED;
 }
 
 int FileListStorage::store(char *remotePath, char *md5, uint64_t mtime) {
@@ -109,25 +109,25 @@ int FileListStorage::store(char *remotePath, char *md5, uint64_t mtime) {
 		return STORAGE_FAILED;
 	} 
 	
-  if (sqlite3_bind_text(fileListStorageStoreStmt, 1, remotePath, (int) strlen(remotePath), SQLITE_STATIC) != SQLITE_OK) {
+	if (sqlite3_bind_text(fileListStorageStoreStmt, 1, remotePath, (int) strlen(remotePath), SQLITE_STATIC) != SQLITE_OK) {
 		sqlite3_finalize(fileListStorageStoreStmt);
-  	return STORAGE_FAILED;
-  }
+		return STORAGE_FAILED;
+	}
 
-  if (sqlite3_bind_text(fileListStorageStoreStmt, 2, md5, 32, SQLITE_STATIC) != SQLITE_OK) {
+	if (sqlite3_bind_text(fileListStorageStoreStmt, 2, md5, 32, SQLITE_STATIC) != SQLITE_OK) {
 		sqlite3_finalize(fileListStorageStoreStmt);
-  	return STORAGE_FAILED;
-  }
+		return STORAGE_FAILED;
+	}
 
-  if (sqlite3_bind_int64(fileListStorageStoreStmt, 3, mtime) != SQLITE_OK) {
+	if (sqlite3_bind_int64(fileListStorageStoreStmt, 3, mtime) != SQLITE_OK) {
 		sqlite3_finalize(fileListStorageStoreStmt);
-  	return STORAGE_FAILED;
-  }
+		return STORAGE_FAILED;
+	}
 
-  if (sqlite3_step(fileListStorageStoreStmt) != SQLITE_DONE) {
+	if (sqlite3_step(fileListStorageStoreStmt) != SQLITE_DONE) {
 		sqlite3_finalize(fileListStorageStoreStmt);
-  	return STORAGE_FAILED;
-  }
+		return STORAGE_FAILED;
+	}
 
 	sqlite3_finalize(fileListStorageStoreStmt);
 
@@ -164,7 +164,7 @@ int FileListStorage::storeRemoteListOfFiles(RemoteListOfFiles *remoteListOfFiles
 		return STORAGE_FAILED;
 	}
 
-	if (sqlite3_prepare_v2(this->sqlite,  "INSERT INTO files (filePath, md5, mtime) VALUES (?,?,?)", 10240, &stmt, &tail) != SQLITE_OK) {
+	if (sqlite3_prepare_v2(this->sqlite, "INSERT INTO files (filePath, md5, mtime) VALUES (?,?,?)", 10240, &stmt, &tail) != SQLITE_OK) {
 		return STORAGE_FAILED;
 	}
 
