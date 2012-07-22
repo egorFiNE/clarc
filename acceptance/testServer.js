@@ -8,7 +8,7 @@ var redirectedFileNames={};
 
 function isCheckAuth(req, res) {
 	if (req.method=="GET" && req.url=="/?location") { // check auth
-		if (req.headers.authorization.substr(0,10)=='AWS test1:' && req.headers.host=='glory.local') { 
+		if (req.headers.authorization.substr(0,10)=='AWS test1:') { 
 			res.writeHead(200, {'Content-Type': 'text/plain'});
 			res.end('okay\n'); // clarc only checks http status
 			console.log("Auth okay");
@@ -46,6 +46,10 @@ function generateRandomString() {
 function isPut(req, res) {
 	if (req.method=="PUT") {
 		if (allowedFileNames.indexOf(req.url)>=0 || redirectedFileNames[req.url]) {
+			if (req.url=='/.files.sqlite3') {
+				console.log("Database loaded");
+			}
+
 			if (redirectedFileNames[req.url]) {
 				delete redirectedFileNames[req.url];
 				console.log("Got %s, redirected size = %d", req.url, Object.keys(redirectedFileNames).length);
@@ -90,7 +94,8 @@ if (!path) {
 fs.readdirSync(path).forEach(function(filename) {
 	allowedFileNames.push('/'+filename);
 });
-allowedFileNames.push('/sirko.test');
+allowedFileNames.push('/.files.sqlite3');
+allowedFileNames.push('/.files.sqlite3-journal');
 
 http.createServer(function (req, res) {
 	if (isCheckAuth(req, res)) {
@@ -103,7 +108,7 @@ http.createServer(function (req, res) {
 
 	res.writeHead(404, {'Content-Type': 'text/plain'});
 	res.end("Where?\n");
-}).listen(80, '127.0.0.1');
+}).listen(80);
 
 console.log('Server running at http://127.0.0.1:80/');
 
