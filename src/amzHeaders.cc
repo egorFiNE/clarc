@@ -14,15 +14,15 @@ AmzHeaders::AmzHeaders() {
 
 AmzHeaders::~AmzHeaders() {
 	for (int i=0;i<this->count;i++) {
-		free(this->names[i]);
+		this->names[i] = NULL;
 		free(this->values[i]);
 	}
 }
 
 void AmzHeaders::add(char *name, char *format, ...) {
-	this->names[this->count]=strdup(name);
+	this->names[this->count]=name;
 
-	char result[1024];
+	char result[10240];
 	va_list args;
 	va_start(args, format);
 	vsprintf(result, format, args);
@@ -38,7 +38,7 @@ void AmzHeaders::add(char *name, char *format, ...) {
 
 char *AmzHeaders::serializeIntoStringToSign() {
 	// add 2 chars for each entry because each entry is joined by ":" and ended with \n
-	int len = this->namesLength + this->valuesLength + (this->count * 2) + 1;
+	int len = this->namesLength + this->valuesLength + (this->count * 2) + 2;
 	char *result = (char *) malloc(len);
 	result[0]=0;
 	for (int i=0;i<this->count;i++) {
