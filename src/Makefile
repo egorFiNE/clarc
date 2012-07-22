@@ -33,5 +33,3 @@ help.c: help.txt help.h
 clarc: $(OBJS) $(HEADERS) help.c
 	$(CXX) $(CFLAGS) -o ../clarc $(OBJS) $(LDFLAGS) 
 
-test: $(OBJS) $(HEADERS) help.c
-	$(CXX) $(CFLAGS) -DTEST -o ../clarc $(OBJS) $(LDFLAGS) 
