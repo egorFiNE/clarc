@@ -103,7 +103,7 @@ int FileListStorage::lookup(char *remotePath, char *md5, uint64_t *mtime) {
 }
 
 int FileListStorage::store(char *remotePath, char *md5, uint64_t mtime) {
-	sqlite3_stmt *fileListStorageStoreStmt;
+	sqlite3_stmt *fileListStorageStoreStmt=NULL;
 	
 	if (sqlite3_prepare(this->sqlite, "REPLACE INTO files (filePath, md5, mtime) VALUES (?,?,?)", -1, &fileListStorageStoreStmt, 0) != SQLITE_OK) {
 		return STORAGE_FAILED;
@@ -153,7 +153,7 @@ int FileListStorage::truncate() {
 
 int FileListStorage::storeRemoteListOfFiles(RemoteListOfFiles *remoteListOfFiles) {
 	char *sErrMsg = 0;
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = NULL;
 	const char *tail = 0;
 
 	if (sqlite3_exec(this->sqlite, "BEGIN TRANSACTION", NULL, NULL, &sErrMsg) != SQLITE_OK) {
