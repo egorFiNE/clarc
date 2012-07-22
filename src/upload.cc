@@ -12,7 +12,6 @@ using namespace std;
 #include <curl/curl.h>
 #include <errno.h>
 #include <sqlite3.h>
-#include <dispatch/dispatch.h>
 
 extern "C" {
 #include "utils.h"
@@ -37,7 +36,6 @@ unsigned int sleep(unsigned int seconds);
 
 
 pthread_mutex_t uidMutex;
-
 
 struct UploadProgress {
 	char *path;
@@ -91,6 +89,8 @@ Uploader::Uploader(AmazonCredentials *amazonCredentials, FilePattern *excludeFil
 Uploader::~Uploader() {
 	this->amazonCredentials = NULL;
 	this->excludeFilePattern = NULL;
+
+	pthread_mutex_destroy(&uidMutex);
 }
 
 void Uploader::extractLocationFromHeaders(char *headers, char *locationResult) {
@@ -434,8 +434,8 @@ struct ThreadCommand {
 	struct stat *fileInfo;
 };
 
-void *uploader_runOverThreadFunc(void* a) {
-	struct ThreadCommand *threadCommand = (struct ThreadCommand *)a;
+void *uploader_runOverThreadFunc(void *arg) {
+	struct ThreadCommand *threadCommand = (struct ThreadCommand *)arg;
 
 	threadCommand->self->runOverThread(
 		threadCommand->threadNumber, 
@@ -450,7 +450,7 @@ void *uploader_runOverThreadFunc(void* a) {
 
 	free(threadCommand->realLocalPath);
 	free(threadCommand->fileInfo);
-	free(a); // possible?
+	free(arg); 
 
 	pthread_exit(NULL);
 }
@@ -495,19 +495,11 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 
 	this->failed=0;
 
-	this->threads = new Threads(10);
+	this->threads = new Threads(this->uploadThreads);
 
-	size_t stacksize;
 	pthread_attr_t attr;
-
 	pthread_attr_init(&attr);
-	pthread_attr_getstacksize (&attr, &stacksize);
-	printf("Default stack size = %li\n", stacksize);
-
-	stacksize = 1024*1024*2;
-	printf("Amount of stack needed per thread = %li\n",stacksize);
-	pthread_attr_setstacksize (&attr, stacksize);
-
+	pthread_attr_setstacksize(&attr, THREAD_STACK_SIZE);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
 	for (int i=0;i<files->count;i++) {
@@ -516,11 +508,9 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 		}
 
 		char *path = (files->paths[i]+1);
-
 		char *realLocalPath = Uploader::createRealLocalPath(prefix, path);
 		
 		struct stat *fileInfo = (struct stat *) malloc(sizeof(struct stat));;
-		
 
 		if (lstat(realLocalPath, fileInfo)<0) {
 			LOG(LOG_ERR, "[Upload] FAIL %s: Cannot open file: %s", path, strerror(errno));
@@ -605,7 +595,6 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 	delete this->threads;
 
 	pthread_attr_destroy(&attr);
-	pthread_mutex_destroy(&uidMutex);
 
 	LOG(LOG_INFO, "[Upload] Finished %s                     ", this->failed ? "with errors" : "successfully");
 

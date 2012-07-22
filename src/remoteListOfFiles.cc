@@ -9,7 +9,6 @@ using namespace std;
 #include <sys/stat.h>
 #include <curl/curl.h>
 #include <errno.h>
-#include <dispatch/dispatch.h>
 #include <math.h>
 
 extern "C" {
@@ -409,21 +408,16 @@ int RemoteListOfFiles::performHeadOnFile(char *remotePath, uint32_t *remoteMtime
 	}
 }
 
-
 struct ThreadCommand {
 	RemoteListOfFiles *self;
 	int threadNumber;
 	int pos;
 };
 
-
-void *remoteListOfFiles_runOverThreadFunc(void* a) {
-	struct ThreadCommand *threadCommand = (struct ThreadCommand *)a;
+void *remoteListOfFiles_runOverThreadFunc(void *arg) {
+	struct ThreadCommand *threadCommand = (struct ThreadCommand *)arg;
 	threadCommand->self->runOverThread(threadCommand->threadNumber, threadCommand->pos);
-
-	printf("Thread %d done\n", threadCommand->threadNumber); fflush(stdout);
-
-	free(a); // possible
+	free(arg); 
 	pthread_exit(NULL);
 }
 
@@ -466,29 +460,27 @@ int RemoteListOfFiles::resolveMtimes() {
 		(this->mtimes)[i]=0;
 	}
 	
-	// dispatch_queue_t globalQueue = dispatch_get_global_queue(0, 0);
-	// dispatch_group_t group = dispatch_group_create();
-	
-	// dispatch_semaphore_t threadsCount = dispatch_semaphore_create(50);
-	
-	this->threads = new Threads(50);
+	this->threads = new Threads(20);
+
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+	pthread_attr_setstacksize(&attr, THREAD_STACK_SIZE);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
 	for (i=0;i<this->count; i++) {
 		int threadNumber = threads->sleepTillThreadFree();
 		threads->markBusy(threadNumber);
-		printf("Thread %d marked bysy\n", threadNumber); fflush(stdout);
 		
-		// FIXME leaking
 		struct ThreadCommand *threadCommand = (struct ThreadCommand *) malloc(sizeof(struct ThreadCommand));
 		threadCommand->threadNumber = threadNumber;
 		threadCommand->pos = i;
 		threadCommand->self = this;
 
 		pthread_t threadId;
-		int rc = pthread_create(&threadId, NULL, remoteListOfFiles_runOverThreadFunc, (void *)threadCommand);
+		int rc = pthread_create(&threadId, &attr, remoteListOfFiles_runOverThreadFunc, (void *)threadCommand);
 		threads->setThreadId(threadNumber, threadId);
 		if (rc) {
-			fprintf(stderr, "ERROR; return code from pthread_create() is %d\n", rc);
+			LOG(LOG_FATAL, "Return code from pthread_create() is %d, exit", rc);
 			exit(-1);
 		}
 
@@ -531,8 +523,9 @@ int RemoteListOfFiles::resolveMtimes() {
 	}
 
 	threads->sleepTillAllThreadsFree();
-
 	delete this->threads;
+
+	pthread_attr_destroy(&attr);
 
 	if (!this->failed) {
 		LOG(LOG_INFO, "[MetaUpdate] All %d files updated", i);

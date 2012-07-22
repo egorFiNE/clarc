@@ -4,7 +4,6 @@
 #include <iostream>
 using namespace std;
 
-#include <dispatch/dispatch.h>
 #include "fileListStorage.h"
 #include "filePattern.h"
 #include "threads.h"
@@ -19,7 +18,6 @@ class Uploader
 private: 
 	AmazonCredentials *amazonCredentials;
 	time_t lastProgressUpdate;
-	dispatch_queue_t systemQueryQueue;
 	FilePattern *excludeFilePattern;
 	int failed;
 
@@ -48,7 +46,6 @@ private:
 		char *remotePath, 
 		char *contentType, 
 		struct stat *fileInfo,
-		//dispatch_queue_t sqlQueue,
 		char *errorResult
 	);
 
