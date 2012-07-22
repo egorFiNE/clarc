@@ -1,7 +1,5 @@
 VERSION=0.0.3
-CC=gcc
-CXX=g++
-BASIC_FLAGS=-O0 -g  -DTEST -Wall -D_FILE_OFFSET_BITS=64 `xml2-config --cflags` -DVERSION=\"$(VERSION)\" -Wno-write-strings -ftrapv
+BASIC_FLAGS=-O0 -g  -DTEST -Wall -D_FILE_OFFSET_BITS=64 `xml2-config --cflags` -DVERSION=\"$(VERSION)\" -Wno-write-strings -ftrapv -pthread
 LDFLAGS_BASIC=`xml2-config --libs` -L/usr/local/lib -lcurl /usr/local/lib/libre2.a
 
 UNAME := $(shell uname)
