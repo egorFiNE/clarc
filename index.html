@@ -125,7 +125,7 @@
 <h3>Retransmit algorythm and consistency issues</h3>
 
 <p>
-	<b>clarc</b> does it's best to upload the file even in case the upload fails. In case of recoverable HTTP/Network error <b>clarc</b> will retry up to <b>3</b> to retransmit a file increasingly sleeping between tries. <b>clarc</b> gives up only in case all three attempts fail. The connect timeout is <b>15 seconds</b>, transmission timeout is <b>10 seconds</b> and <b>clarc</b> uses up to <b>50 threads</b> to read/upload files.
+	<b>clarc</b> does it's best to upload the file even in case the upload fails. In case of recoverable HTTP/Network error <b>clarc</b> will retry up to <b>3</b> to retransmit a file increasingly sleeping between tries. <b>clarc</b> gives up only in case all three attempts fail. The connect timeout is <b>15 seconds</b>, transmission timeout is <b>10 seconds</b>.
 </p>
 
 <p>
@@ -217,7 +217,7 @@
 
 <dl>
 	<dt>--uploadThreads <span class="argument">&lt;int&gt;</span></dt>
-	<dd>Count of threads to spawn for upload. Default: 10.</dd>
+	<dd>Count of threads to spawn for upload. Default: 4.</dd>
 	<dt>--connectTimeout <span class="argument">&lt;seconds&gt;</span></dt>
 	<dd>Timeout for connect operation only, in seconds. Default: 15.</dd>
 	<dt>--networkTimeout <span class="argument">&lt;seconds&gt;</span></dt>

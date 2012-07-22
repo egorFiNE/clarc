@@ -46,9 +46,8 @@
 <h2>Run on Linux</h2>
 
 <p>
-	<b>clarc</b> is built on <a href="http://en.wikipedia.org/wiki/Grand_Central_Dispatch">Grand Central Dispatch</a> to use all available CPU cores, network bandwidth and disk speed. In order to run <b>clarc</b> binary on Linux you will need the following libraries installed: 
+	In order to run <b>clarc</b> binary on Linux you will need the following libraries installed: 
 	<ul>
-		<li>libdispatch</li>
 		<li>libcurl with SSL support</li>
 		<li>libxml2</li>
 	</ul>
@@ -56,83 +55,43 @@
 </p>
 
 <p>To install this libraries on <b>Ubuntu 12</b> run:</p>
-<pre><code>sudo apt-get install libdispatch0</code></pre>
+<pre><code>sudo apt-get install libcurl3-gnutls</code></pre>
 
 <p>To install this libraries on <b>Debian 6.0.5</b> run:</p>
-<pre><code>sudo apt-get install libcurl3 libdispatch0</code></pre>
+<pre><code>sudo apt-get install libcurl3</code></pre>
 
 <h2>Build on Linux</h2>
 
-<p>
-	To build <b>clarc</b> you need:
-
-	<ul>
-		<li><a href="http://clang.llvm.org/">clang C/C++ compiler</a>;</li>
-		<li><code>libdispatch</code> and other library headers;</li>
-		<li><a href="http://code.google.com/p/re2/">Google's RE2 library</a>;</li>
-	</ul>
-</p>
-
 	<p>
 		To install build dependencies on <b>Ubuntu 12:</b>
-		<pre><code>sudo apt-get install build-essential clang libxml2-dev libsqlite3-dev <span class="codeBackslash">\</span>
-     libcurl4-openssl-dev libdispatch-dev</code></pre>
+		<pre><code>sudo apt-get install build-essential libxml2-dev libsqlite3-dev <span class="codeBackslash">\</span>
+     libcurl4-openssl-dev</code></pre>
 	</p>
 
 	<p>
 		To install build dependencies on <b>Debian 6.0.5:</b>
-		<pre><code>sudo apt-get install clang libdispatch-dev gcc make gcc++ <span class="codeBackslash">\</span>
-     libstdc++6-4.4-dev g++ libsqlite3-dev libcurl4-openssl-dev libxml2-dev</code></pre>
+		<pre><code>sudo apt-get install gcc make gcc++ libstdc++6-4.4-dev g++ <span class="codeBackslash">\</span>
+     libsqlite3-dev libcurl4-openssl-dev libxml2-dev</code></pre>
 	</p>
 
 	<p>
-		Then install libre2, which is simple. See: <a href="http://code.google.com/p/re2/wiki/Install">How to install libre2</a>. 
+		To install build dependencies on <b>Fedora 17:</b>
+<pre><code>sudo yum install libstdc++-devel libstdc++ gcc gcc-g++ <span class="codeBackslash">\</span>
+     libcurl-devel libsqlite3x-devel <span class="codeBackslash">\</span>
+     libxml2-devel rpm-build</code></pre>
+	</p>
+
+	<p>
+		Then install <a href="http://code.google.com/p/re2/">Google's re2 library</a>, which is simple. See: <a href="http://code.google.com/p/re2/wiki/Install">How to install libre2</a>. 
 	</p>
 
 	<p>
 		Then simply <code>make</code>. 
 	</p>
 
-<h2>Build on Fedora Linux</h2>
-
-<p>
-	It is incredibly complex as <a href="https://bugzilla.redhat.com/show_bug.cgi?id=824406">clang++ is broken on Fedora 17</a>. The procedure is not for the faint of the heart so I'd suggest you use by prebuild binary. Heck, it's even different for i386 and x86_64 Fedoras! :-(
-</p>
-
-<p>
-	Here's the procedure that worked; <b>as of 0.0.3 it doesn't</b> because <b>clarc</b> requires libre2. Fedora users are out of luck until clang++ is fixed.
-</p>
-
-<p>
-	0. Install build dependencies.
-<pre><code>sudo yum install libstdc++-devel libstdc++ gcc gcc-g++ clang <span class="codeBackslash">\</span>
-     clang-devel llvm-libs llvm-devel libcurl-devel libsqlite3x-devel <span class="codeBackslash">\</span>
-     libxml2-devel rpm-build</code></pre>
-</p>
-
-<p>
-	1. Build <code>libdispatch</code> with SRPMS available here: <a href="http://mark.heily.com/node/51/release">http://mark.heily.com/node/51/release</a>. Install the resulting RPMS (you might want to add <code>--nodeps</code>). If <code>libdispatch</code> doesn't build, you might need to move <code>/usr/lib/pkgconfig/*</code> to <code>/usr/share/pkgconfig/</code>.
-</p>
-
-<p>
-	2. Install libre2. This is extremely simple: <a href="http://code.google.com/p/re2/wiki/Install">How to install libre2</a>. 
-</p>
-
-<p>
-	3. Go to <code>clarc/src/</code> and remove all <code style="white-space: nowrap">#include &lt;iostream&gt;</code> and <code style="white-space: nowrap">#include &lt;unistd.h&gt;</code> from files.  
-</p>
-
-<p>
-	4. In <code>upload.cc</code> add the following right after <code>extern "C" {</code>:
-	<pre><code>unsigned int sleep(unsigned int seconds);</pre></code>
-
-<p>
-	5. <code>make</code>
-</p>
-
 <h2>Build on OS X</h2>
 
-<p>OS X has GCD and clang available by default, but you must have Xcode (or Xcode command-line tools) installed. </p>
+<p>You must have Xcode or Xcode command-line tools installed. </p>
 
 <p>However SQLite3 is better to be rebuilt with threads support. Download the <a href="http://www.sqlite.org/download.html">latest SQLite source code</a> (pick the second link, the tar.gz). Unpack it, then run: 
 
