@@ -478,15 +478,22 @@ int RemoteListOfFiles::resolveMtimes() {
 
 int RemoteListOfFiles::checkAuth() {
 	uint32_t statusCode;
-	char errorResult[1024*100] = "";
-	char body[1024*1024*3] = ""; // 3mb should be enough?
+	char *errorResult = (char *) malloc(1024*100);
+	errorResult[0]=0;
+	char *body = (char*)malloc(1024*1024*3); // 3mb should be enough?
+	body[0]=0;
+
 	uint64_t bodySize=0;
 	int res = this->performGetOnBucket(NULL, 1, body, &bodySize, &statusCode, errorResult); 
+	free(body);
 
 	if (res == LIST_FAILED) {
 		LOG(LOG_DBG, "[Auth] GET Failed: %s", errorResult);
+		free(errorResult);
 		return AUTH_FAILED;
 	}
+
+	free(errorResult);
 
 	if (statusCode==200) {
 		return AUTH_SUCCESS;
