@@ -21,7 +21,7 @@ char *getIsoDate() {
 char *hrSize(uint64_t size) {
 	char *result = malloc(400);
 	if (size>=1024*1024*1024) { // gigabyte
-		sprintf(result, "%.2fGb", (double)size / 1024 / 1024 / 1024);
+		sprintf(result, "%.3fGb", (double)size / 1024 / 1024 / 1024);
 	} else if (size>=1024*1024) { // megabyte
 		sprintf(result, "%.2fMb", (double)size / 1024 / 1024);
 	} else if (size>=1024) { // kilobyte
