@@ -9,7 +9,7 @@
 #define RETRY_SLEEP_TIME 5 // second, sleep time increment between failed retries to upload
 #define RETRY_FAIL_AFTER 3 // how many tries to perform on failed upload
 
-#define UPLOAD_THREADS 10
+#define UPLOAD_THREADS 4
 
 #define THREAD_STACK_SIZE 2*1024*1024
 
