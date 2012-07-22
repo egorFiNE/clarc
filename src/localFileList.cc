@@ -26,7 +26,7 @@ LocalFileList::LocalFileList(FilePattern *excludeFilePattern) {
 
 LocalFileList::~LocalFileList() {
 	for (uint32_t i=0;i<this->count;i++) {
-		free(this->paths[i]);
+		this->paths[i]=NULL;
 	}
 
 	free(this->sizes);
@@ -41,7 +41,7 @@ void LocalFileList::add(char *path, uint64_t size) {
 		return;
 	}
 
-	this->paths[this->count] = strdup(path);
+	this->paths[this->count] = path;
 	this->sizes[this->count] = size;
 	this->count++;
 	if (this->count>=this->allocCount) {
@@ -77,7 +77,6 @@ void LocalFileList::recurseIn(char *path, char *prefix) {
 				this->add(fullName, (uint64_t) fileInfo.st_size);
 			}
 			free(statName);
-			free(fullName);
 
 		} else if (dp->d_type == DT_DIR) {
 			if (strcmp(dp->d_name, ".")!=0 && strcmp(dp->d_name, "..")!=0) {
