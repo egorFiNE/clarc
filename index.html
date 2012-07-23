@@ -74,8 +74,7 @@
 <pre><code>clarc --upload <span class="codeBackslash">\</span>
       --accessKeyId UKIOIZZADUGFFDD7SFVF  <span class="codeBackslash">\</span>
       --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  <span class="codeBackslash">\</span>
-      --source <span class="paramSource">/home/egor/Music/</span> <span class="codeBackslash">\</span>
-      --bucket <span class="paramDest">music.egorfine.com</span></code></pre>
+      <span class="paramSource">/home/egor/Music/</span>  <span class="paramDest">s3://music.egorfine.com/</span></code></pre>
 
 <p>
 	This will upload all local files from <span class="paramSource">/home/egor/Music</span> to Amazon S3 bucket <span class="paramDest">music.egorfine.com</span>. <b>clarc</b> will create a database file <span style="white-space: nowrap"><span class="paramSource">/home/egor/Music</span>/.files.sqlite3</span>. 
@@ -108,8 +107,7 @@
 <pre><code>clarc --rebuild <span class="codeBackslash">\</span>
       --accessKeyId UKIOIZZADUGFFDD7SFVF  <span class="codeBackslash">\</span>
       --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  <span class="codeBackslash">\</span>
-      --source <span class="paramSource">/home/egor/Music/</span> <span class="codeBackslash">\</span>
-      --bucket <span class="paramDest">music.egorfine.com</span></code></pre>
+      <span class="paramSource">/home/egor/Music/</span>  <span class="paramDest">s3://music.egorfine.com</span></code></pre>
 
 
 <p>
@@ -119,8 +117,7 @@
 <pre><code>clarc --rebuild --upload <span class="codeBackslash">\</span>
       --accessKeyId UKIOIZZADUGFFDD7SFVF  <span class="codeBackslash">\</span>
       --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  <span class="codeBackslash">\</span>
-      --source <span class="paramSource">/home/egor/Music/</span> <span class="codeBackslash">\</span>
-      --bucket <span class="paramDest">music.egorfine.com</span></code></pre>
+      <span class="paramSource">/home/egor/Music/</span>  <span class="paramDest">s3://music.egorfine.com/</span></code></pre>
 
 <h3>Retransmit algorythm and consistency issues</h3>
 
@@ -132,23 +129,32 @@
 	The file is updated in local meta database <b>only</b> after it is successfully uploaded and Amazon S3 returned MD5 checksum (which is also stored, of course).
 </p>
 
+<h3>S3 destination</h3>
+
+<p>S3 destination is specified in the form <code>s3://BUCKET<span class="paramDest">[.ENDPOINT]</span>/</code> where <span class="paramDest">ENDPOINT</span> is optional and could be one of those: 
+
+	<ul style="padding-left: 2em">
+<li>s3.amazonaws.com (<i>the default</i>);</li>
+<li>s3-us-west-2.amazonaws.com;</li>
+<li>s3-us-west-1.amazonaws.com;</li>
+<li>s3-eu-west-1.amazonaws.com;</li>
+<li>s3-ap-southeast-1.amazonaws.com;</li>
+<li>s3-ap-northeast-1.amazonaws.com;</li>
+<li>s3-sa-east-1.amazonaws.com;</li>
+	</ul>
+
 <h3>Path options</h3>
 
 <dl>
-
-	<dt>--source <span class="argument">&lt;path&gt;</span> <span class="mandatory">*</span></dt>
-	<dd>Actual absolute path to folder being uploaded.</dd>
-
 	<dt>--exclude <span class="argument">&lt;pattern&gt;</span></dt>
 	<dd>Ignore certain files/folders according to the Regular Expression pattern. Example:
 
 <pre>clarc --upload <span class="codeBackslash">\</span>
       --accessKeyId UKIOIZZADUGFFDD7SFVF  <span class="codeBackslash">\</span>
       --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  <span class="codeBackslash">\</span>
-      --source <span class="paramSource">/home/egor/Music/</span> <span class="codeBackslash">\</span>
-      --bucket <span class="paramDest">music.egorfine.com</span> <span class="codeBackslash">\</span>
       --exclude <span class="paramExclude">.+\.m4a$</span> --exclude <span class="paramExclude">.+\.m4v$</span> <span class="codeBackslash">\</span>
-      --exclude <span class="paramExclude">\/Justin\ Bieber\/.+$</span></pre>
+      --exclude <span class="paramExclude">\/Justin\ Bieber\/.+$</span> <span class="codeBackslash">\</span>
+      <span class="paramSource">/home/egor/Music/</span>  <span class="paramDest">s3://music.egorfine.com/</span></pre>
 
       This will upload everything but m4v &amp; m4a files as well as skip a folder with garbage. You can specify more than a single <code>--exclude</code> parameter. <br/><br/>
       See <a href="http://code.google.com/p/re2/wiki/Syntax">Google re2 syntax</a> page for details on the possible regular expressions.
@@ -162,14 +168,7 @@
 
 <dl>
 	<dt>--accessKeyId <span class="argument">&lt;string&gt;</span>, --secretAccessKey <span class="argument">&lt;string&gt;</span> <span class="mandatory">*</span></dt>
-	<dd>Amazon S3 Access Credentials. Get them <a href="https://portal.aws.amazon.com/gp/aws/securityCredentials">here</a>. 
-
-	<dt>--bucket <span class="argument">&lt;string&gt;</span> <span class="mandatory">*</span></dt>
-	<dd>Name of the Amazon S3 bucket to store your files. Must exists. (Yes, I will later implement creation on demand.)</dd>
-
-	<dt>--endPoint <span class="argument">&lt;string&gt;</span> <span class="mandatory">*</span></dt>
-	<dd>Amazon S3 Endpoint. Specify rubbish to get the list of available endpoints 
-		or simply use the default one, which is suitable for all regions.</dd>
+	<dd>Amazon S3 Access Credentials. Get them <a href="https://portal.aws.amazon.com/gp/aws/securityCredentials">here</a>. You can also specify them in environment variables <code>S3_ACCESSKEYID</code> and <code>S3_SECRETACCESSKEY</code> instead of the command line.
 
 	<dt>--rrs</dt>
 	<dd>Use <a href="http://aws.amazon.com/s3/faqs/#What_is_RRS">Reduced Redundancy Storage</a> instead of the Standard Storage.</dd>
@@ -254,7 +253,13 @@
 	</dd>
 
 	<dt>How secure are my files?</dt>
-	<dd>As secure as Amazon S3 storage is. Client-side encryption is planned.</dd>
+	<dd>As secure as Amazon S3 storage is. Client-side encryption is planned. Files are transferred over SSL-encrypted socket unless <code>--skipSsl</code> is specified.</dd>
+
+	<dt>Do you support Amazon S3 Server Side Encryption?</dt>
+	<dd>
+		No and it isn't planned. Server Side Encryption only protects your files from inner Amazon S3 hacks 
+		or rogue employees. It doesn't protect you from data theft. Client side encryption will solve both when implemented.
+	</dd>
 
 	<dt>What if I loose the database file?</dt>
 	<dd>No worries: use <code>--rebuild</code> command to recover.</dd>
@@ -323,7 +328,7 @@
 <h3>Script (config files)</h3> 
 
 <p>
-	Essentially this is just command line parsing from file instead of the command line. So instead of calling <code>clarc --source ...</code> you will invoce <code>clarc ./backup.ini</code> or something.
+	Essentially this is just command line parsing from file instead of the command line. So instead of calling <code>clarc ...</code> you will invoce <code>clarc ./backup.ini</code> or something.
 </p>
 
 <h3>Check UID, GID and mode changes</h3>

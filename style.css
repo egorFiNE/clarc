@@ -1484,7 +1484,7 @@ hr {
 }
 
 .paramDest {
-  color: green;
+  color: #00B000;
   white-space: nowrap;
 }
 
@@ -1492,6 +1492,7 @@ hr {
   color: #FFFF00;
   white-space: nowrap;
 }
+
 
 .codeBackslash {
   color: #777;
