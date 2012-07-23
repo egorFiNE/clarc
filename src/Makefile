@@ -19,15 +19,24 @@ OBJS=localFileList.o fileListStorage.o upload.o base64.o help.o utils.o curlResp
 	main.o remoteListOfFiles.o filePattern.o amzHeaders.o sha1.o hmac-sha1.o memxor.o logger.o threads.o destination.o
 HEADERS=*.h
 
+prefix=/usr/local
+bindir=$(prefix)/bin
+mandir=$(prefix)/share/man/man1
+INSTALL=install
+INSTALL_PROGRAM=$(INSTALL)
+
 all: clarc
 
 clean:
-	rm -f ../clarc help.c *.o
+	rm -f clarc help.c *.o
 
 help.c: help.txt help.h
 	sh makeHelpC.sh
 	$(CC) -c help.c 
 
 clarc: $(OBJS) $(HEADERS) help.c
-	$(CXX) -o ../clarc $(OBJS) $(LDFLAGS) 
+	$(CXX) -o clarc $(OBJS) $(LDFLAGS) 
 
+install: clarc
+	$(INSTALL) -m 0755 clarc $(DESTDIR)$(bindir)/clarc
+	$(INSTALL) -m 0644 clarc.1 $(DESTDIR)$(mandir)/clarc.1
