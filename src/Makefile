@@ -15,7 +15,8 @@ CXXFLAGS=$(BASIC_FLAGS) -D_DARWIN_FEATURE_64_BIT_INODE
 LDFLAGS=$(LDFLAGS_BASIC) -lz -lssl -lcrypto ../libsqlite3.a
 endif
 
-OBJS=localFileList.o fileListStorage.o upload.o base64.o help.o utils.o curlResponse.o amazonCredentials.o main.o remoteListOfFiles.o filePattern.o amzHeaders.o sha1.o hmac-sha1.o memxor.o logger.o threads.o
+OBJS=localFileList.o fileListStorage.o upload.o base64.o help.o utils.o curlResponse.o amazonCredentials.o \
+	main.o remoteListOfFiles.o filePattern.o amzHeaders.o sha1.o hmac-sha1.o memxor.o logger.o threads.o 
 HEADERS=*.h
 
 all: clarc
