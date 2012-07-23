@@ -1,24 +1,24 @@
 Usage: 
-    clarc MODE OPTIONS
+    clarc MODE [OPTIONS] SOURCE DEST
 
 MODE should be one or both of: 
     --upload      actually upload files to Amazon S3
     --rebuild     download files list and meta information
                   from Amazon S3 and rebuild local database
 
-    (you must specify at least one of the modes)
+SOURCE is the path to folder that is being uploaded.
 
-Local database contains meta information about all the files in 
-the filesystem, including size, mtime, uid and gid. 
+DEST is the Amazon S3 destination in format:
+
+    s3://BUCKET[.ENDPOINT]/
 
 OPTIONS:
-    --source <path> (*)     Absolute path to folder that is being uploaded
-
     --accessKeyId <string> (*)
     --secretAccessKey <string> (*)   Amazon AWS credentials
 
-    --bucket <string> (*)   S3 bucket to upload to
-    --endPoint <string>     S3 endpoint (default: 's3.amazonaws.com')
+      (you can also specify them in environment variables 
+       S3_ACCESSKEYID and S3_SECRETACCESSKEY instead of
+       the command line)
 
     --rrs                   Use Reduced Redundancy Storage on S3.
     --public                Make all files public. Default: private. 
@@ -58,8 +58,8 @@ OPTIONS:
     (*) are mandatory
 
 Example:
-    clarc  --accessKeyId UKIOIZZADUGFFDD7SFVF  --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  --source /home/egor/Music/  --bucket music.egorfine.com  --rebuild  --upload --rrs
+    clarc  --accessKeyId UKIOIZZADUGFFDD7SFVF  --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  --rebuild  --upload --rrs  /home/egor/Pictures/  s3://pics.egorfine.com.s3-eu-west-1.amazonaws.com/
 
-    clarc  --upload --accessKeyId UKIOIZZADUGFFDD7SFVF  --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  --source /home/egor/Music/  --bucket music.egorfine.com --exclude .+\\.m4a$ --exclude \\/Justin\\ Bieber\\/.+$ --progress
+    clarc  --upload --accessKeyId UKIOIZZADUGFFDD7SFVF  --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  --exclude .+\\.m4a$   --exclude \\/Justin\\ Bieber\\/.+$  --progress  /home/egor/Music/  s3://music.egorfine.com/
 
 See also man clarc. 

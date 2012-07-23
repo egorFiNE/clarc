@@ -5,4 +5,5 @@ Suite *AmzHeadersSuite(void);
 Suite *FileListStorageSuite(void);
 Suite *RemoteListOfFilesSuite(void);
 Suite *UploadSuite(void);
-
+Suite *UtilsSuite(void);
+Suite *DestinationSuite(void);

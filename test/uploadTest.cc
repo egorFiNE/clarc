@@ -56,46 +56,11 @@ START_TEST(Upload_extractMD5FromETagHeaders) {
 	fail_unless(strlen(md5)==0);
 } END_TEST
 
-START_TEST(Upload_extractLocationFromHeaders) {
-	char locationResult[1024]="";
-
-	Uploader::extractLocationFromHeaders(NULL, locationResult);
-	fail_unless(strlen(locationResult)==0);
-
-	Uploader::extractLocationFromHeaders("", locationResult);
-	fail_unless(strlen(locationResult)==0);
-
-	Uploader::extractLocationFromHeaders("Location: ", locationResult);
-	fail_unless(strlen(locationResult)==0);
-
-	Uploader::extractLocationFromHeaders("dfsfsd", locationResult);
-	fail_unless(strlen(locationResult)==0);
-
-	Uploader::extractLocationFromHeaders("Location: \nsdf", locationResult);
-	fail_unless(strlen(locationResult)==0);
-
-	Uploader::extractLocationFromHeaders("Location: s", locationResult);
-	fail_unless(strcmp(locationResult, "s")==0);
-
-	Uploader::extractLocationFromHeaders("Location: sirko", locationResult);
-	fail_unless(strcmp(locationResult, "sirko")==0);
-
-	Uploader::extractLocationFromHeaders("vasya\nLocation: sirko", locationResult);
-	fail_unless(strcmp(locationResult, "sirko")==0);
-
-	Uploader::extractLocationFromHeaders("vasya\nLocation: sirko\nsdfsdfsdf\n", locationResult);
-	fail_unless(strcmp(locationResult, "sirko")==0);
-
-	Uploader::extractLocationFromHeaders("vasya\r\nLocation: sirko\r\nsdfsdfsdf\r\n", locationResult);
-	fail_unless(strcmp(locationResult, "sirko")==0);
-} END_TEST
-
 Suite *UploadSuite(void) {
 	Suite *s = suite_create("Upload");
 
 	TCase *tc1 = tcase_create("static");
 	tcase_add_test(tc1, Upload_extractMD5FromETagHeaders);
-	tcase_add_test(tc1, Upload_extractLocationFromHeaders);
 	suite_add_tcase(s, tc1);
 
 	return s;

@@ -29,6 +29,8 @@ int main(int argc, char *argv[]) {
 	srunner_add_suite(sr, FileListStorageSuite());
 	srunner_add_suite(sr, RemoteListOfFilesSuite());
 	srunner_add_suite(sr, UploadSuite());
+	srunner_add_suite(sr, UtilsSuite());
+	srunner_add_suite(sr, DestinationSuite());
 	srunner_run_all(sr, CK_VERBOSE);
 	number_failed = srunner_ntests_failed(sr);
 	srunner_free(sr);

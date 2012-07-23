@@ -3,7 +3,7 @@
 clarc \- sync local files to Amazon S3 cloud storage
 .SH SYNOPSIS
 .B clarc
-[\fIMODE\fR] [\fIOPTION\fR]... 
+\fIMODE\fR [\fIOPTION\fR]... \fISOURCE\fR \fIDEST\fR
 .SH DESCRIPTION
 .B clarc
 is a utility that synchronizes local file system folder to Amazon S3. Only files that were changed/added since last 
@@ -19,19 +19,26 @@ The first option for
 must be one or both of the following. If you specify both, then 
 .B rebuild 
 is done first. This is the most failsafe mode of operation. 
-.PP
 .TP
 \fB\-\-upload\fR
 Actually upload files to Amazon S3.
 .TP
 \fB\-\-rebuild\fR
 Download files list and meta information from Amazon S3 and rebuild local database from scratch.
+.SH SOURCE
+\fISOURCE\fR is the path to folder that is being uploaded.
+.SH DEST
+\fIDEST\fR is the Amazon S3 destination in format:
+
+  s3://BUCKET[.ENDPOINT]/
+
+For example, 
+
+  s3://test.egorfine.com/
+  s3://test.egorfine.com.s3.amazonaws.com/
+  s3://something.else.net.s3-ap-southeast-1.amazonaws.com/
 .SH PATH OPTIONS
 .PP
-.TP
-\fB\-\-source <path> 
-.B (*)
-Absolute path to folder that is being uploaded. 
 .TP
 \fB\-\-exclude <pattern> 
 Ignore certain files/folders according to the Regular Expression pattern. There could be more than a single --exclude argument.
@@ -43,18 +50,11 @@ The same as --exclude but will read a list of exclude patterns from file instead
 .TP
 \fB\-\-accessKeyId <string>
 .B (*) 
-Amazon S3 Access Key ID
+Amazon S3 Access Key ID. You can also specify it in S3_ACCESSKEYID environment variable instead of the command line.
 .TP
 \fB\-\-secretAccessKeyId <string> 
 .B (*) 
-Amazon S3 Secret Access Key
-.TP
-\fB\-\-bucket <string> 
-.B (*) 
-Amazon S3 bucket to upload to
-.TP
-\fB\-\-endPoint <string> 
-Amazon S3 endpoint (default: 's3.amazonaws.com', which is suitable for any bucket in any region already existing on S3).
+Amazon S3 Secret Access Key. You can also specify it in S3_SECRETACCESSKEY environment variable instead of the command line.
 .TP
 \fB\-\-rrs
 Use Reduced Redundancy Storage for Amazon S3, which is recommended for backups. RRS is cheaper and lost files will be restored anyway with a 
@@ -125,8 +125,7 @@ See documentation for examples; this is a single one.
   clarc --rebuild  --upload
         --accessKeyId UKIOIZZADUGFFDD7SFVF 
         --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  
-        --source /home/egor/Music/  
-        --bucket music.egorfine.com  
+        /home/egor/Music/  s3://music.egorfine.com/
 .SH AUTHOR
 Copyright \(co 2012 Egor Egorov  <me@egorfine.com>
 .SH REPORTING BUGS

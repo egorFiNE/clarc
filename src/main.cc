@@ -23,13 +23,16 @@ extern "C" {
 #include "remoteListOfFiles.h"
 #include "upload.h"
 #include "filePattern.h"
+#include "destination.h"
 
-static char *accessKeyId=NULL, *secretAccessKey=NULL, *bucket=NULL, *endPoint = (char *) "s3.amazonaws.com",
-	*source=NULL, *databasePath=NULL, *databaseFilename= (char *)".files.sqlite3";
+static char *accessKeyId=NULL, *secretAccessKey=NULL,
+	*databasePath=NULL, *databaseFilename= (char *)".files.sqlite3",
+	*source = NULL;
 static int performRebuild=0, performUpload=0, makeAllPublic=0, useRrs=0, showProgress=0, skipSsl=0, dryRun=0,
 	connectTimeout = 0, networkTimeout = 0, uploadThreads = 0;
 
 FilePattern *excludeFilePattern;
+Destination *destination;
 
 FILE *logStream;
 int logLevel = LOG_ERR;
@@ -61,42 +64,6 @@ int rebuildDatabase(RemoteListOfFiles *remoteListOfFiles, AmazonCredentials *ama
 	}
 }
 
-static char *endPoints[] = {
-	(char *) "s3.amazonaws.com",
-	(char *) "s3-us-west-2.amazonaws.com",
-	(char *) "s3-us-west-1.amazonaws.com",
-	(char *) "s3-eu-west-1.amazonaws.com",
-	(char *) "s3-ap-southeast-1.amazonaws.com",
-	(char *) "s3-ap-northeast-1.amazonaws.com",
-	(char *) "s3-sa-east-1.amazonaws.com",
-	NULL
-};
-
-int validateEndpoint(char *endPoint) {
-	int i=0;
-	while (char *e=endPoints[i++]) {
-		if (e && strcmp(e, endPoint)==0) {
-			return 1;
-		}
-	}
-
-#ifdef TEST
-	if (strcmp(endPoint, "local")==0) { 
-		printf("EndPoint for testing purposes engaged.\n");
-		return 1;
-	}
-#endif
-
- 	printf("--endPoint %s not valid, use one of:\n", endPoint);
-
- 	i=0;
-	while (char *e=endPoints[i++]) {
-		printf("\t%s\n", e);
-	}
-
-	return 0;
-}
-
 char *buildDatabaseFilePath(char *databaseFilename, char *databasePath) {
 	uint64_t len = strlen(databasePath)+strlen(databaseFilename)+2;
 	char *databaseFilePath = (char *) malloc(len);
@@ -111,6 +78,17 @@ void showVersion() {
 	printf("clarc version " VERSION " (c) 2012 Egor Egorov <me@egorfine.com>\nMIT License  |  http://egorfine.com/clarc/\n");
 }
 
+void clearString(char *str) {
+	if (str==NULL) {
+		return;
+	}
+
+	int i;
+	for(i=0;i<strlen(str);i++) {
+		str[i]='X';
+	}
+}
+
 int parseCommandline(int argc, char *argv[]) {
 	if (argc==1) {
 		showVersion();
@@ -121,8 +99,6 @@ int parseCommandline(int argc, char *argv[]) {
 	static struct option longOpts[] = {
 		{ "accessKeyId",       required_argument,  NULL,  0 },
 		{ "secretAccessKey",   required_argument,  NULL,  0 },
-		{ "bucket",            required_argument,  NULL,  0 },
-		{ "endPoint",          required_argument,  NULL,  0 },
 		{ "public",            no_argument,        NULL,  0 },
 		{ "rrs",               no_argument,        NULL,  0 },
 		{ "rss",               no_argument,        NULL,  0 }, // common typo
@@ -132,7 +108,6 @@ int parseCommandline(int argc, char *argv[]) {
 		{ "networkTimeout",    required_argument,  NULL,  0 },
 		{ "uploadThreads",     required_argument,  NULL,  0 },
 
-		{ "source",            required_argument,  NULL,  0 },
 		{ "dbPath",            required_argument,  NULL,  0 },
 		{ "dbFilename",        required_argument,  NULL,  0 },
 
@@ -171,15 +146,11 @@ int parseCommandline(int argc, char *argv[]) {
 
 		if (strcmp(longName, "accessKeyId")==0) {
 			accessKeyId = strdup(optarg);
+			clearString(optarg); // hide credentials from process list
 
 		} else if (strcmp(longName, "secretAccessKey")==0) {
 			secretAccessKey = strdup(optarg);
-
-		} else if (strcmp(longName, "bucket")==0) {
-			bucket = strdup(optarg);
-
-		} else if (strcmp(longName, "endPoint")==0) {
-			endPoint = strdup(optarg);
+			clearString(optarg); // hide credentials from process list
 
 		} else if (strcmp(longName, "networkTimeout")==0) {
 			networkTimeout = atoi(optarg);
@@ -228,9 +199,6 @@ int parseCommandline(int argc, char *argv[]) {
 				exit(1);
 			}
 
-		} else if (strcmp(longName, "source")==0) {
-			source = strdup(optarg);
-
 		} else if (strcmp(longName, "dbPath")==0) {
 			databasePath = strdup(optarg);
 
@@ -256,39 +224,54 @@ int parseCommandline(int argc, char *argv[]) {
 		}
 	}
 
+	argc -= optind;
+	argv += optind;
+
+	if (argc!=2) {
+		printf("Specify source and destination.\n");
+		exit(1);
+	}
+
+	source = argv[0];
+	char *destinationString = argv[1];
+
 	int failed = 0;
 
-	if (!source) {
-		printf("Specify --source.\n"); 
+	if (source[0]!='/') {
+		source = realpath(source, NULL);
+		if (source==NULL) {
+			printf("Source folder is invalid.\n");
+			failed=1;
+		}
+	}
+
+	destination = new Destination(destinationString);
+	if (!destination->isValid()) {
+		printf("Destination is invalid.\n");
+		delete destination;
 		failed = 1;
-	}
-
-	if (source && source[0]!='/') {
-		printf("--source must be absolute path.\n");
-		failed=1;
-	}
-
-	if (!accessKeyId) {
-		printf("Specify --accessKeyId.\n"); 
-		failed = 1;
-	}
-
-	if (!secretAccessKey) {
-		printf("Specify --secretAccessKey.\n"); 
-		failed = 1;
-	}
-
-	if (!bucket) {
-		printf("Specify --bucket.\n"); 
-		failed = 1;
-	}
-
-	if (!validateEndpoint(endPoint)) {
-	failed = 1;
 	}
 
 	if (!performRebuild && !performUpload) {
 		printf("What shall I do? Say --rebuild and/or --upload!\n");
+		failed = 1;
+	}
+
+	if (accessKeyId==NULL) {
+		accessKeyId=strdup(getenv("S3_ACCESSKEYID"));
+	} 
+
+	if (!accessKeyId) {
+		printf("Specify --accessKeyId argument or S3_ACCESSKEYID environment variable\n"); 
+		failed = 1;
+	}
+
+	if (secretAccessKey==NULL) {
+		secretAccessKey=strdup(getenv("S3_SECRETACCESSKEY"));
+	} 
+
+	if (!secretAccessKey) {
+		printf("Specify --secretAccessKey argument or S3_SECRETACCESSKEY environment variable\n"); 
 		failed = 1;
 	}
 
@@ -347,11 +330,23 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
+	if (strcmp(destination->folder, "")!=0) {
+		printf("Folders with destination are not yet supported.\n");
+		exit(1);
+	}
+
 	AmazonCredentials *amazonCredentials = new AmazonCredentials(
 		accessKeyId, 
 		secretAccessKey,
-		bucket, endPoint
+		destination->bucket, destination->endPoint
 	);
+
+	char *absoluteString = destination->absoluteString();
+	LOG(LOG_INFO, "[Main] %s -> %s", source, absoluteString);
+	free(absoluteString);
+
+	// explicitly commented out;  amazonCredentials must strdup!!
+	// delete destination;
 
 	RemoteListOfFiles *remoteListOfFiles = new RemoteListOfFiles(amazonCredentials);
 	remoteListOfFiles->showProgress = showProgress;
