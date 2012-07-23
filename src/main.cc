@@ -122,7 +122,7 @@ int parseCommandline(int argc, char *argv[]) {
 		{ "rebuild",           no_argument,        NULL,  0 },
 		{ "upload",            no_argument,        NULL,  0 },
 
-		{ "version",           no_argument,        NULL,  'V' },
+		{ "version",           no_argument,        NULL,  'v' },
 		{ "help",              no_argument,        NULL,  'h' },
 
 		{ NULL,                0,                  NULL,  0 }
