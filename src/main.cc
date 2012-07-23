@@ -14,6 +14,7 @@ extern "C" {
 #include <libxml/xmlmemory.h>
 #include "help.h"
 #include "logger.h"
+#include "sslThreadLocks.h"
 }
 
 #include "localFileList.h"
@@ -327,7 +328,10 @@ int verifySource(char *source) {
 
 int main(int argc, char *argv[]) {
 	int res;
+
 	curl_global_init(CURL_GLOBAL_ALL);
+	sslInitLocks();
+
 	xmlInitParser();
 
 	logStream = stdout;
