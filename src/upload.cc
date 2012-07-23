@@ -93,35 +93,6 @@ Uploader::~Uploader() {
 	pthread_mutex_destroy(&uidMutex);
 }
 
-void Uploader::extractLocationFromHeaders(char *headers, char *locationResult) {
-	*locationResult=0;
-	if (!headers) {
-		return;
-	}
-	char *locationPointer = strstr(headers, "Location: ");
-	if (locationPointer) {
-		locationPointer+=10;
-
-		if (strlen(locationPointer)<=0) {
-			return;
-		}
-
-		char *endPointer = locationPointer;
-		while (*endPointer!=0 && *endPointer!='\n' && *endPointer!='\r') {
-			endPointer++;
-		}
-
-		if (endPointer==locationPointer) {
-			return;
-		}
-
-		int len = endPointer-locationPointer;
-
-		strncpy(locationResult, locationPointer, len);
-		locationResult[len]=0;
-	}
-}
-
 
 void Uploader::extractMD5FromETagHeaders(char *headers, char *md5) {
 	*md5=0;
@@ -309,7 +280,7 @@ CURLcode Uploader::uploadFile(
 		*httpStatusCode = (uint32_t) _httpStatus;
 
 		if (_httpStatus==307) {
-			Uploader::extractLocationFromHeaders(curlResponse.headers, errorResult);
+			extractLocationFromHeaders(curlResponse.headers, errorResult);
 		} else if (_httpStatus==200) { 
 			Uploader::extractMD5FromETagHeaders(curlResponse.headers, md5);
 		}
@@ -344,7 +315,12 @@ int Uploader::uploadFileWithRetry(
 	char *url = NULL;
 	do {
 		errorResult[0]=0;
+
 		CURLcode res=this->uploadFile(localPath, remotePath, url, contentType, fileInfo, httpStatusCode, md5, errorResult);
+		
+		if (url!=NULL) {
+			free(url);
+		}
 
 		if (*httpStatusCode==307) {
 			url = strdup(errorResult); 

@@ -174,7 +174,7 @@ int RemoteListOfFiles::parseListOfFiles(char *body, uint64_t bodySize, uint8_t *
 	return 1;
 }
 
-int RemoteListOfFiles::performGetOnBucket(char *marker, int setLocationHeader, char *body, uint64_t *bodySize, uint32_t *statusCode, char *errorResult) {
+int RemoteListOfFiles::performGetOnBucket(char *url, char *marker, int setLocationHeader, char *body, uint64_t *bodySize, uint32_t *statusCode, char *errorResult) {
 	char method[4]="GET";
 
 	char *date = getIsoDate(); 
@@ -198,20 +198,31 @@ int RemoteListOfFiles::performGetOnBucket(char *marker, int setLocationHeader, c
 		return LIST_FAILED;
 	}
 
-	char *url = amazonCredentials->generateUrl((char *) "", this->useSsl);
+	char *postUrl;
+	if (url) {
+		postUrl = strdup(url);
+	} else {
+		postUrl = amazonCredentials->generateUrl((char *) "", this->useSsl);
+	}
+
 	if (marker && strlen(marker) > 0) {
-		strcat(url, "?marker=");
-		strcat(url, marker);
+		if (strstr(postUrl, marker)==NULL) {
+			strcat(postUrl, "?marker=");
+			strcat(postUrl, marker);
+		}
+
 	} else if (setLocationHeader) {
-		strcat(url, "?location");
+		if (strstr(postUrl, "?location")==NULL) {
+			strcat(postUrl, "?location");
+		}
 	}
 
 	struct CurlResponse curlResponse;
 	CurlResponseInit(&curlResponse);
 
-	curl_easy_setopt(curl, CURLOPT_URL, url);
-	LOG(LOG_DBG, "[File list] GET %s", url);
-	free(url);
+	curl_easy_setopt(curl, CURLOPT_URL, postUrl);
+	LOG(LOG_DBG, "[File list] GET %s", postUrl);
+	free(postUrl);
 
 	struct curl_slist *slist = NULL;
 
@@ -250,8 +261,13 @@ int RemoteListOfFiles::performGetOnBucket(char *marker, int setLocationHeader, c
 		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpStatus);
 		*statusCode = (uint32_t) httpStatus;
 
-		memcpy(body, curlResponse.body, curlResponse.bodySize);
-		*bodySize = (uint64_t) curlResponse.bodySize;
+		if (httpStatus==307) {
+			extractLocationFromHeaders(curlResponse.headers, errorResult);
+			*bodySize=0;
+		} else { 
+			memcpy(body, curlResponse.body, curlResponse.bodySize);
+			*bodySize = (uint64_t) curlResponse.bodySize;
+		}
 
 		curl_easy_cleanup(curl);
 		CurlResponseFree(&curlResponse);
@@ -270,6 +286,7 @@ int RemoteListOfFiles::downloadList() {
 	uint32_t statusCode = 0;
 	char lastKey[1024*100] = "";
 	uint8_t isTruncated=0;
+	char *url = NULL;
 
 	do {
 		char errorResult[1024*100] = "";
@@ -283,7 +300,13 @@ int RemoteListOfFiles::downloadList() {
 		char *body = (char *) malloc(1024*1024*3); // 3mb should be enough?
 		body[0]=0;
 		uint64_t bodySize=0;
-		int res = this->performGetOnBucket(lastKey, 0, body, &bodySize, &statusCode, errorResult); 
+
+		int res = this->performGetOnBucket(url, lastKey, 0, body, &bodySize, &statusCode, errorResult); 
+		if (url!=NULL) {
+			free(url);
+			url=NULL;
+		}
+
 		if (res==LIST_FAILED) {
 			LOG(LOG_FATAL, "[List] FAIL GET: %s", errorResult);
 			free(body);
@@ -294,6 +317,12 @@ int RemoteListOfFiles::downloadList() {
 			LOG(LOG_FATAL, "[List] FAIL GET: Bucket doesn't exists");
 			free(body);
 			return LIST_FAILED;
+
+		} else if (statusCode==307) {
+			LOG(LOG_INFO, "[List] Retrying: Amazon asked to repeat to: %s", errorResult);
+			url = strdup(errorResult); 
+			free(body);
+			continue;
 		}
 
 		if (statusCode!=200) {
@@ -322,7 +351,7 @@ int RemoteListOfFiles::downloadList() {
 	return LIST_SUCCESS;
 }
 
-int RemoteListOfFiles::performHeadOnFile(char *remotePath, uint32_t *remoteMtime, uint32_t *statusCode, char *errorResult) {
+int RemoteListOfFiles::performHeadOnFile(char *url, char *remotePath, uint32_t *remoteMtime, uint32_t *statusCode, char *errorResult) {
 	char method[5]="HEAD";
 
 	char *date = getIsoDate(); 
@@ -345,13 +374,18 @@ int RemoteListOfFiles::performHeadOnFile(char *remotePath, uint32_t *remoteMtime
 		return HEAD_FAILED;
 	}
 
-	char *url = amazonCredentials->generateUrl(escapedRemotePath, this->useSsl); 
+	char *headUrl;
+	if (url) {
+		headUrl = strdup(url);
+	} else {
+		headUrl = amazonCredentials->generateUrl(escapedRemotePath, this->useSsl); 
+	}
 
 	struct CurlResponse curlResponse;
 	CurlResponseInit(&curlResponse);
 
-	curl_easy_setopt(curl, CURLOPT_URL, url);
-	free(url);
+	curl_easy_setopt(curl, CURLOPT_URL, headUrl);
+	free(headUrl);
 
 	struct curl_slist *slist = NULL;
 
@@ -422,12 +456,22 @@ void *remoteListOfFiles_runOverThreadFunc(void *arg) {
 }
 
 void RemoteListOfFiles::runOverThread(int threadNumber, int pos) {
-	if (!this->failed) {
+	if (this->failed) {
+		return;
+	}
+
+	char *url = NULL;
+	do {
 		char errorResult[1024*100];
 		errorResult[0]=0;
 		uint32_t mtime=0, statusCode=0;
 
-		int res = this->performHeadOnFile(this->paths[pos], &mtime, &statusCode, errorResult);
+		int res = this->performHeadOnFile(url, this->paths[pos], &mtime, &statusCode, errorResult);
+
+		if (url!=NULL) {
+			free(url);
+		}
+
 		if (res==HEAD_FAILED) {
 			LOG(LOG_FATAL, "[MetaUpdate] FAIL %s: %s", this->paths[pos], errorResult);
 			this->failed=1;
@@ -435,23 +479,30 @@ void RemoteListOfFiles::runOverThread(int threadNumber, int pos) {
 			return;
 		}
 
-		if (statusCode!=200) {
+		if (statusCode==307) {
+			url = strdup(errorResult); 
+			LOG(LOG_INFO, "[MetaUpdate] Retrying: Amazon asked to repeat to: %s", url);
+			continue;
+
+		} else if (statusCode!=200) {
 			LOG(LOG_FATAL, "[MetaUpdate] FAIL %s: HTTP status=%d", this->paths[pos], statusCode);
 			this->failed=1;
 			this->threads->markFree(threadNumber);
 			return;
+
+		} else if (statusCode==200) {
+			this->mtimes[pos] = mtime;
+			double percent = (double) pos / (double) this->count;
+
+			if (this->showProgress) {
+				printf("\r[MetaUpdate] Updated %.1f%% (%u files out of %u)     \r", percent*100, (uint32_t) pos, this->count);
+			}
+
+			LOG(LOG_INFO, "[MetaUpdate] updated %s", this->paths[pos]);
+			this->threads->markFree(threadNumber);
+			return;
 		}
-
-		this->mtimes[pos] = mtime;
-		double percent = (double) pos / (double) this->count;
-
-		if (this->showProgress) {
-			printf("\r[MetaUpdate] Updated %.1f%% (%u files out of %u)     \r", percent*100, (uint32_t) pos, this->count);
-		}
-		LOG(LOG_INFO, "[MetaUpdate] updated %s", this->paths[pos]);
-	}
-
-	this->threads->markFree(threadNumber);
+	} while (true);
 }
 
 int RemoteListOfFiles::resolveMtimes() {
@@ -542,7 +593,7 @@ int RemoteListOfFiles::checkAuth() {
 	body[0]=0;
 
 	uint64_t bodySize=0;
-	int res = this->performGetOnBucket(NULL, 1, body, &bodySize, &statusCode, errorResult); 
+	int res = this->performGetOnBucket(NULL, NULL, 1, body, &bodySize, &statusCode, errorResult); 
 	free(body);
 
 	if (res == LIST_FAILED) {

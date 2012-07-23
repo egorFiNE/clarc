@@ -50,7 +50,6 @@ private:
 	);
 
 	static void extractMD5FromETagHeaders(char *headers, char *md5);
-	static void extractLocationFromHeaders(char *headers, char *locationResult);
 	static char *createRealLocalPath(char *prefix, char *path);
 
 public:
