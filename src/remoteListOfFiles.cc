@@ -206,14 +206,14 @@ int RemoteListOfFiles::performGetOnBucket(char *url, char *marker, int setLocati
 
 	if (marker && strlen(marker) > 0) {
 		if (strstr(postUrl, marker)==NULL) {
-			postUrl = realloc(postUrl, strlen(postUrl) + strlen(marker) + 16);
+			postUrl = (char*) realloc(postUrl, strlen(postUrl) + strlen(marker) + 16);
 			strcat(postUrl, "?marker=");
 			strcat(postUrl, marker);
 		}
 
 	} else if (setLocationHeader) {
 		if (strstr(postUrl, "?location")==NULL) {
-			postUrl = realloc(postUrl, strlen(postUrl) + 16);
+			postUrl = (char*) realloc(postUrl, strlen(postUrl) + 16);
 			strcat(postUrl, "?location");
 		}
 	}
@@ -513,7 +513,7 @@ void RemoteListOfFiles::runOverThread(int threadNumber, int pos) {
 				printf("\r[MetaUpdate] Updated %.1f%% (%u files out of %u)     \r", percent*100, (uint32_t) pos, this->count);
 			}
 
-			LOG(LOG_INFO, "[MetaUpdate] updated %s", this->paths[pos]);
+			LOG(LOG_INFO, "[MetaUpdate] updated %s                                             ", this->paths[pos]);
 			this->threads->markFree(threadNumber);
 			return;
 		}
