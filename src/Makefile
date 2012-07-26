@@ -38,5 +38,6 @@ clarc: $(OBJS) $(HEADERS) help.c
 	$(CXX) -o clarc $(OBJS) $(LDFLAGS) 
 
 install: clarc
+	strip clarc
 	$(INSTALL) -m 0755 clarc $(DESTDIR)$(bindir)/clarc
 	$(INSTALL) -m 0644 clarc.1 $(DESTDIR)$(mandir)/clarc.1
