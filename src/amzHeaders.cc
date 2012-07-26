@@ -23,13 +23,13 @@ AmzHeaders::~AmzHeaders() {
 void AmzHeaders::add(char *name, char *format, ...) {
 	this->names[this->count]=name;
 
-	char result[10240];
+	char *result;
 	va_list args;
 	va_start(args, format);
-	vsprintf(result, format, args);
+	vasprintf(&result, format, args);
 	va_end(args);
 
-	this->values[this->count]=strndup(result, strlen(result));
+	this->values[this->count]=result;
 
 	this->namesLength+=strlen(name);
 	this->valuesLength+=strlen(result);

@@ -54,6 +54,7 @@ void Destination::parse(char *destination) {
 	}
 
 	char *path = strdup(destination+5);
+
 	char *slash = strchr(path, '/');
 	if (slash!=NULL) {
 		*slash=0;
@@ -87,6 +88,8 @@ void Destination::parse(char *destination) {
 	if (this->bucket==NULL) {
 		this->bucket = strdup(path);
 	}
+
+	free(path);
 }
 
 int Destination::isValid() {

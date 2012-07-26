@@ -48,15 +48,15 @@ char *getIsoDate() {
 }
 
 char *hrSize(uint64_t size) {
-	char *result = malloc(128);
+	char *result = NULL;
 	if (size>=1024*1024*1024) { // gigabyte
-		sprintf(result, "%.3fGb", (double)size / 1024 / 1024 / 1024);
+		asprintf(&result, "%.3fGb", (double)size / 1024 / 1024 / 1024);
 	} else if (size>=1024*1024) { // megabyte
-		sprintf(result, "%.2fMb", (double)size / 1024 / 1024);
+		asprintf(&result, "%.2fMb", (double)size / 1024 / 1024);
 	} else if (size>=1024) { // kilobyte
-		sprintf(result, "%.2fKb", (double)size / 1024);
+		asprintf(&result, "%.2fKb", (double)size / 1024);
 	} else { 
-		sprintf(result, "%hub", (uint16_t) size);
+		asprintf(&result, "%hub", (uint16_t) size);
 	}
 	return result;
 }
@@ -128,3 +128,4 @@ char *guessContentType(char *filename) {
 
 	return result;
 }
+

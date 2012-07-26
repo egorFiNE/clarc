@@ -140,11 +140,8 @@ CURLcode Uploader::uploadFile(
 	CURL *curl = curl_easy_init();
 	char *escapedRemotePath=curl_easy_escape(curl, remotePath, 0);
 
-	char *canonicalizedResource=(char *)malloc(strlen(amazonCredentials->bucket) + strlen(escapedRemotePath) + 4);
-	sprintf(canonicalizedResource, "/%s/%s", amazonCredentials->bucket, escapedRemotePath);
-
-	char *gidHeader = (char *) malloc(1024);
-	char *uidHeader = (char *) malloc(1024);
+	char *gidHeader;
+	char *uidHeader;
 
 	// I believe mutex is only needed for Linux, as I have seen it failing when called in multiple threads.
 	// -- EE
@@ -153,8 +150,8 @@ CURLcode Uploader::uploadFile(
 	struct group *gid = getgrgid(fileInfo->st_gid);
 	pthread_mutex_unlock(&uidMutex);
 
-	sprintf(gidHeader, (char *) "%" PRIu64 " %s", (uint64_t) fileInfo->st_gid, gid->gr_name);
-	sprintf(uidHeader, (char *) "%" PRIu64 " %s", (uint64_t) fileInfo->st_uid, uid->pw_name);
+	asprintf(&gidHeader, (char *) "%" PRIu64 " %s", (uint64_t) fileInfo->st_gid, gid->gr_name);
+	asprintf(&uidHeader, (char *) "%" PRIu64 " %s", (uint64_t) fileInfo->st_uid, uid->pw_name);
 
 	AmzHeaders *amzHeaders = new AmzHeaders();
 	if (this->makeAllPublic) {
@@ -176,6 +173,9 @@ CURLcode Uploader::uploadFile(
 
 	char *amzHeadersToSign = amzHeaders->serializeIntoStringToSign();
 
+	char *canonicalizedResource;
+	asprintf(&canonicalizedResource, "/%s/%s", amazonCredentials->bucket, escapedRemotePath);
+	
 	char *stringToSign = (char *)malloc(strlen(canonicalizedResource) + strlen(amzHeadersToSign) + 1024); // 1k is enough to hold other headers
 	sprintf(stringToSign, "%s\n%s\n%s\n%s\n", method, "", contentType, date);
 	strcat(stringToSign, amzHeadersToSign);
@@ -217,19 +217,22 @@ CURLcode Uploader::uploadFile(
 
 	struct curl_slist *slist = NULL;
 
-	char dateHeader[128];
-	sprintf(dateHeader, "Date: %s", date);
+	char *dateHeader;
+	asprintf(&dateHeader, "Date: %s", date);
 	slist = curl_slist_append(slist, dateHeader);
 	free(date);
+	free(dateHeader);
 
-	char authorizationHeader[128];
-	sprintf(authorizationHeader, "Authorization: %s", authorization);
+	char *authorizationHeader;
+	asprintf(&authorizationHeader, "Authorization: %s", authorization);
 	slist = curl_slist_append(slist, authorizationHeader);
 	free(authorization);
+	free(authorizationHeader);
 
-	char contentTypeHeader[128];
-	sprintf(contentTypeHeader, "Content-Type: %s", contentType);
+	char *contentTypeHeader;
+	asprintf(&contentTypeHeader, "Content-Type: %s", contentType);
 	slist = curl_slist_append(slist, contentTypeHeader);
+	free(contentTypeHeader);
 
 	slist = curl_slist_append(slist, "Expect:");
 

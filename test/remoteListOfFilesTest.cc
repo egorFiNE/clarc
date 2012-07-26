@@ -70,8 +70,9 @@ START_TEST(RemoteListOfFiles_extractMtimeFromHeaders) {
 } END_TEST
 
 char *readXml(int num) {
-	char path[1024];
-	sprintf(path, "./data/list/list-%d.xml", num);
+	char *path;
+	asprintf(&path, "./data/list/list-%d.xml", num);
+	free(path);
 	FILE *f = fopen(path, "r");
 	if (!f) {
 		return NULL;

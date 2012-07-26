@@ -37,9 +37,8 @@ char *AmazonCredentials::generateUrl(char *remotePath, int useSsl) {
 		remotePathToUse++;
 	}
 
-	char *resultUrl = (char *) malloc(strlen(this->bucket) + strlen(this->endPoint) + strlen(remotePathToUse) + 32);
-	resultUrl[0]=0; 
-	sprintf(resultUrl, "%s://%s.%s/%s", useSsl?"https":"http", this->bucket, this->endPoint, remotePathToUse);
+	char *resultUrl;
+	asprintf(&resultUrl, "%s://%s.%s/%s", useSsl?"https":"http", this->bucket, this->endPoint, remotePathToUse);
 	return resultUrl;
 }
 
@@ -56,7 +55,7 @@ int AmazonCredentials::sign(char *result, char *stringToSign) {
 }
 
  char *AmazonCredentials::createAuthorizationHeader(char *stringToSign) {
-	char signature[128] = "";
+	char signature[1024] = "";
 
 	int res = this->sign(signature, stringToSign);
 	if (res) {

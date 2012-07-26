@@ -77,9 +77,11 @@ START_TEST(LocalFileList_recurseInEmpty) {
 START_TEST(LocalFileList_recurseInEmptySubdir) {
 	char path[1024] = "./data/recurse-in-test-empty-subdir";
 	mkdir(path, 0755);
-	char path2[1024];
-	sprintf(path2, "%s/%s", path, "sirko");
+
+	char *path2;
+	asprintf(&path2, "%s/%s", path, "sirko");
 	mkdir(path2, 0755);
+	free(path2);
 
 	localFileList->recurseIn("", path);
 	fail_unless(localFileList->count==0);

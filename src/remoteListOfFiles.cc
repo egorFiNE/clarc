@@ -150,11 +150,10 @@ int RemoteListOfFiles::parseListOfFiles(char *body, uint64_t bodySize, uint8_t *
 				cur2 = cur2->next;
 			}
 
-			if (md5!=NULL && keyFound) {
-				this->add(lastKey, md5);
-				free(md5);
-
-			} else if (md5!=NULL) {
+			if (md5!=NULL) {
+				if (keyFound) {
+					this->add(lastKey, md5);
+				}
 				free(md5);
 			}
 
@@ -181,16 +180,16 @@ int RemoteListOfFiles::performGetOnBucket(char *url, char *marker, int setLocati
 
 	CURL *curl = curl_easy_init();
 
-	char canonicalizedResource[102400];
-	sprintf(canonicalizedResource, "/%s/", amazonCredentials->bucket);
-	if (setLocationHeader) {
-		strcat(canonicalizedResource, "?location");
-	}
+	char *canonicalizedResource;
+	asprintf(&canonicalizedResource, "/%s/%s", amazonCredentials->bucket, setLocationHeader ? "?location" : "");
 
-	char stringToSign[102400];
-	sprintf(stringToSign, "%s\n\n%s\n%s\n%s", method, "", date, canonicalizedResource);
+	char *stringToSign;
+	asprintf(&stringToSign, "%s\n\n%s\n%s\n%s", method, "", date, canonicalizedResource);
+	free(canonicalizedResource);
 
 	char *authorization = amazonCredentials->createAuthorizationHeader(stringToSign); 
+	free(stringToSign);
+
 	if (authorization == NULL) {
 		free(date);
 		curl_easy_cleanup(curl);		
@@ -226,15 +225,17 @@ int RemoteListOfFiles::performGetOnBucket(char *url, char *marker, int setLocati
 
 	struct curl_slist *slist = NULL;
 
-	char dateHeader[1024];
-	sprintf(dateHeader, "Date: %s", date);
+	char *dateHeader;
+	asprintf(&dateHeader, "Date: %s", date);
 	slist = curl_slist_append(slist, dateHeader);
 	free(date);
+	free(dateHeader);
 
-	char authorizationHeader[1024];
-	sprintf(authorizationHeader, "Authorization: %s", authorization);
+	char *authorizationHeader;
+	asprintf(&authorizationHeader, "Authorization: %s", authorization);
 	slist = curl_slist_append(slist, authorizationHeader);
 	free(authorization);
+	free(authorizationHeader);
 
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
 	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
@@ -349,6 +350,10 @@ int RemoteListOfFiles::downloadList() {
 
 	} while (isTruncated);
 
+	if (url!=NULL) {  // satisfy clang --analyze
+		free(url);
+	}
+
 	return LIST_SUCCESS;
 }
 
@@ -360,13 +365,17 @@ int RemoteListOfFiles::performHeadOnFile(char *url, char *remotePath, uint32_t *
 	CURL *curl = curl_easy_init();
 
 	char *escapedRemotePath=curl_easy_escape(curl, remotePath, 0);
-	char canonicalizedResource[102400];
-	sprintf(canonicalizedResource, "/%s/%s", amazonCredentials->bucket, escapedRemotePath);
+	
+	char *canonicalizedResource;
+	asprintf(&canonicalizedResource, "/%s/%s", amazonCredentials->bucket, escapedRemotePath);
 
-	char stringToSign[102400];
-	sprintf(stringToSign, "%s\n\n%s\n%s\n%s", method, "", date, canonicalizedResource);
+	char *stringToSign;
+	asprintf(&stringToSign, "%s\n\n%s\n%s\n%s", method, "", date, canonicalizedResource);
+	free(canonicalizedResource);
 
 	char *authorization = amazonCredentials->createAuthorizationHeader(stringToSign);
+	free(stringToSign);
+
 	if (authorization == NULL) {
 		strcpy(errorResult, "Error in auth module");
 		free(date);
@@ -390,15 +399,17 @@ int RemoteListOfFiles::performHeadOnFile(char *url, char *remotePath, uint32_t *
 
 	struct curl_slist *slist = NULL;
 
-	char dateHeader[1024];
-	sprintf(dateHeader, "Date: %s", date);
+	char *dateHeader;
+	asprintf(&dateHeader, "Date: %s", date);
 	slist = curl_slist_append(slist, dateHeader);
 	free(date);
+	free(dateHeader);
 
-	char authorizationHeader[1024];
-	sprintf(authorizationHeader, "Authorization: %s", authorization);
+	char *authorizationHeader;
+	asprintf(&authorizationHeader, "Authorization: %s", authorization);
 	slist = curl_slist_append(slist, authorizationHeader);
 	free(authorization);
+	free(authorizationHeader);
 
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
 	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
@@ -536,39 +547,6 @@ int RemoteListOfFiles::resolveMtimes() {
 			LOG(LOG_FATAL, "Return code from pthread_create() is %d, exit", rc);
 			exit(-1);
 		}
-
-/*
-		dispatch_group_async(group, globalQueue, ^{
-			if (!failed) {
-				char errorResult[1024*100] = "";
-				uint32_t mtime=0, statusCode=0;
-
-				int res = self->performHeadOnFile(self->paths[i], &mtime, &statusCode, errorResult);
-				if (res==HEAD_FAILED) {
-					LOG(LOG_FATAL, "[MetaUpdate] FAIL %s: %s", self->paths[i], errorResult);
-					failed=1;
-					dispatch_semaphore_signal(threadsCount);							
-					return;
-				}
-
-				if (statusCode!=200) {
-					LOG(LOG_FATAL, "[MetaUpdate] FAIL %s: HTTP status=%d", self->paths[i], statusCode);
-					failed=1;
-					dispatch_semaphore_signal(threadsCount);							
-					return;
-				}
-
-				self->mtimes[i] = mtime;
-				double percent = (double) i / (double) self->count;
-
-				if (self->showProgress) {
-					printf("\r[MetaUpdate] Updated %.1f%% (%u files out of %u)     \r", percent*100, (uint32_t) i, self->count);
-				}
-				LOG(LOG_INFO, "[MetaUpdate] updated %s", self->paths[i]);
-			}
-
-			dispatch_semaphore_signal(threadsCount);							
-		});*/
 
 		if (this->failed) {
 			break;
