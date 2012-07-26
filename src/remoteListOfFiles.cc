@@ -286,6 +286,7 @@ int RemoteListOfFiles::downloadList() {
 	uint32_t statusCode = 0;
 	char lastKey[1024*100] = "";
 	uint8_t isTruncated=0;
+
 	char *url = NULL;
 
 	do {
@@ -470,6 +471,7 @@ void RemoteListOfFiles::runOverThread(int threadNumber, int pos) {
 
 		if (url!=NULL) {
 			free(url);
+			url=NULL;
 		}
 
 		if (res==HEAD_FAILED) {

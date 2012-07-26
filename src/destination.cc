@@ -94,7 +94,12 @@ int Destination::isValid() {
 }
 
 char *Destination::absoluteString() {
-	char *result = (char*) malloc(strlen(this->endPoint) + strlen(this->bucket) + strlen(this->folder) + 16);
+	int len = strlen(this->endPoint) + strlen(this->bucket) + 16;
+	if (folder) {
+		 len+=strlen(this->folder);
+	}
+	
+	char *result = (char*) malloc(len);
 	result[0]=0;
 	strcat(result, "s3://");
 	strcat(result, this->bucket);

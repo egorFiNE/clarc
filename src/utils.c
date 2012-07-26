@@ -41,14 +41,14 @@ char *getIsoDate() {
 	time(&rawtime);
 	struct tm *timeinfo;
 	timeinfo = gmtime (&rawtime);
-	char *date = (char *)malloc(64);
+	char *date = (char *)malloc(128);
 	date[0]=0;
-	strftime(date, 1024, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
+	strftime(date, 128, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
 	return date;
 }
 
 char *hrSize(uint64_t size) {
-	char *result = malloc(400);
+	char *result = malloc(128);
 	if (size>=1024*1024*1024) { // gigabyte
 		sprintf(result, "%.3fGb", (double)size / 1024 / 1024 / 1024);
 	} else if (size>=1024*1024) { // megabyte

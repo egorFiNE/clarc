@@ -82,6 +82,9 @@ Uploader::Uploader(AmazonCredentials *amazonCredentials, FilePattern *excludeFil
 	this->connectTimeout = CONNECT_TIMEOUT;
 	this->networkTimeout = LOW_SPEED_TIME;
 	this->uploadThreads = UPLOAD_THREADS;
+	this->failed=0;
+	this->showProgress=0;
+	this->threads = NULL;
 
 	pthread_mutex_init(&uidMutex, NULL);
 }
@@ -320,6 +323,7 @@ int Uploader::uploadFileWithRetry(
 		
 		if (url!=NULL) {
 			free(url);
+			url=NULL;
 		}
 
 		if (*httpStatusCode==307) {
@@ -330,9 +334,6 @@ int Uploader::uploadFileWithRetry(
 		}
 
 		if (res==CURLE_OK) {
-			if (url) {
-				free(url);
-			}
 			return UPLOAD_SUCCESS;
 		}
 
@@ -341,17 +342,10 @@ int Uploader::uploadFileWithRetry(
 			int sleepTime = cUploads*RETRY_SLEEP_TIME; 
 			sleep(sleepTime);
 		} else { 
-			if (url) {
-				free(url);
-			}
 			return UPLOAD_FAILED;
 		}
 		cUploads++;
 	} while (cUploads<RETRY_FAIL_AFTER); 
-
-	if (url) {
-		free(url);
-	}
 
 	return UPLOAD_FAILED;
 }
