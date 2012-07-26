@@ -206,12 +206,14 @@ int RemoteListOfFiles::performGetOnBucket(char *url, char *marker, int setLocati
 
 	if (marker && strlen(marker) > 0) {
 		if (strstr(postUrl, marker)==NULL) {
+			postUrl = realloc(postUrl, strlen(postUrl) + strlen(marker) + 16);
 			strcat(postUrl, "?marker=");
 			strcat(postUrl, marker);
 		}
 
 	} else if (setLocationHeader) {
 		if (strstr(postUrl, "?location")==NULL) {
+			postUrl = realloc(postUrl, strlen(postUrl) + 16);
 			strcat(postUrl, "?location");
 		}
 	}
