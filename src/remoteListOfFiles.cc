@@ -40,7 +40,7 @@ RemoteListOfFiles::RemoteListOfFiles(AmazonCredentials *amazonCredentials) {
 }
 
 RemoteListOfFiles::~RemoteListOfFiles() {
-	for (int i=0;i<this->count;i++) {
+	for (uint32_t i=0;i<this->count;i++) {
 		free(this->paths[i]);
 		free(this->md5s[i]);
 	}

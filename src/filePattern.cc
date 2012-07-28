@@ -15,7 +15,7 @@ FilePattern::FilePattern() {
 }
 
 FilePattern::~FilePattern() {
-	for (int i=0;i<this->count;i++) {
+	for (uint32_t i=0;i<this->count;i++) {
 		delete this->patterns[i];
 	}
 	free(this->patterns);
@@ -56,7 +56,7 @@ int FilePattern::add(char *pattern) {
 }
 
 int FilePattern::matches(char *path) {
-	for (int i=0;i<this->count;i++) {
+	for (uint32_t i=0;i<this->count;i++) {
 		RE2 *re = this->patterns[i];
 		if (RE2::FullMatch(path, *re)) {
 			return 1;
