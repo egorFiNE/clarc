@@ -53,15 +53,14 @@ RemoteListOfFiles::~RemoteListOfFiles() {
 }
 
 uint32_t RemoteListOfFiles::extractMtimeFromHeaders(char *headers) {
-	if (!headers) {
+	if (headers==NULL) {
 		return 0;
 	}
+
 	char *str = strstr(headers, "x-amz-meta-mtime: ");
-	if (str) { 
-		char another[11];
-		another[0]=0;
-		strncpy(another, (str+18), 10);
-		return (uint32_t) atoll(another);
+	if (str!=NULL) { 
+		char *space = strchr(str, ' ');
+		return (uint32_t) atoll(space);
 	}
 	return 0;
 }
@@ -389,7 +388,7 @@ int RemoteListOfFiles::performHeadOnFile(char *url, char *remotePath, uint32_t *
 	}
 
 	free(escapedRemotePath);
-	
+
 	struct CurlResponse curlResponse;
 	CurlResponseInit(&curlResponse);
 
