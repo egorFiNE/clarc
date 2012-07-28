@@ -17,17 +17,9 @@ extern "C" {
 
 #include "amzHeaders.h"
 
-AmzHeaders *amzHeaders;
-
-void AmzHeaders_setup(void) {
-	amzHeaders = new AmzHeaders();
-}
-
-void AmzHeaders_teardown(void) {
-	delete amzHeaders;
-}
-
 START_TEST(AmzHeaders_mainTest) {
+	AmzHeaders *amzHeaders = new AmzHeaders();
+
 	char *serialized;
 
 	serialized = amzHeaders->serializeIntoStringToSign();
@@ -41,15 +33,29 @@ START_TEST(AmzHeaders_mainTest) {
 	amzHeaders->add("Second", "%s==%d", "one", 1);
 
 	serialized = amzHeaders->serializeIntoStringToSign();
-	fail_unless(strcmp(serialized, "Sirko:vasya\nSecond:one==1\n")==0);
+	fail_unless(strcmp(serialized, "Second:one==1\nSirko:vasya\n")==0);
+
+	delete amzHeaders;
+} END_TEST
+
+START_TEST(AmzHeaders_sortTest) {
+	AmzHeaders *amzHeaders = new AmzHeaders();
+
+	amzHeaders->add("Sirko", "vasya");
+	amzHeaders->add("Albert", "%s", "Einstein");
+
+	char *serialized = amzHeaders->serializeIntoStringToSign();
+	fail_unless(strcmp(serialized, "Albert:Einstein\nSirko:vasya\n")==0);
+
+	delete amzHeaders;
 } END_TEST
 
 Suite *AmzHeadersSuite(void) {
 	Suite *s = suite_create("AmzHeaders");
 
 	TCase *tc = tcase_create("Main");
-	tcase_add_checked_fixture (tc, AmzHeaders_setup, AmzHeaders_teardown);
 	tcase_add_test(tc, AmzHeaders_mainTest);
+	tcase_add_test(tc, AmzHeaders_sortTest);
 	suite_add_tcase(s, tc);
 
 	return s;

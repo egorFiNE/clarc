@@ -70,3 +70,12 @@ struct curl_slist *AmzHeaders::serializeIntoCurl(struct curl_slist *slist) {
 
 	return slist2;
 }
+
+struct curl_slist *AmzHeaders::addHeader(struct curl_slist *slist, char *name, char *value) {
+	char *header;
+	asprintf(&header, "%s: %s", name, value);
+	struct curl_slist *slist2 = curl_slist_append(slist, header);
+	free(header);
+	return slist2;
+}
+

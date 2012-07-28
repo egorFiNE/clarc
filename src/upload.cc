@@ -117,6 +117,24 @@ void Uploader::extractMD5FromETagHeaders(char *headers, char *md5) {
 	}
 }
 
+void Uploader::addUidAndGidHeaders(uid_t uid, gid_t gid, AmzHeaders *amzHeaders) {
+	pthread_mutex_lock(&uidMutex);
+	struct passwd *uidS = getpwuid(uid);
+	struct group *gidS = getgrgid(gid);
+
+	char *uidHeader;
+	char *gidHeader;
+	asprintf(&uidHeader, (char *) "%" PRIu64 " %s", (uint64_t) uid, uidS->pw_name);
+	asprintf(&gidHeader, (char *) "%" PRIu64 " %s", (uint64_t) gid, gidS->gr_name);
+
+	pthread_mutex_unlock(&uidMutex);
+
+	amzHeaders->add((char *) "x-amz-meta-uid", uidHeader);
+	amzHeaders->add((char *) "x-amz-meta-gid", gidHeader);
+	free(gidHeader);
+	free(uidHeader);	
+}
+
 CURLcode Uploader::uploadFile(
 	char *localPath, 
 	char *remotePath, 
@@ -140,36 +158,18 @@ CURLcode Uploader::uploadFile(
 	CURL *curl = curl_easy_init();
 	char *escapedRemotePath=curl_easy_escape(curl, remotePath, 0);
 
-	char *gidHeader;
-	char *uidHeader;
-
-	// I believe mutex is only needed for Linux, as I have seen it failing when called in multiple threads.
-	// -- EE
-	pthread_mutex_lock(&uidMutex);
-	struct passwd *uid = getpwuid(fileInfo->st_uid);
-	struct group *gid = getgrgid(fileInfo->st_gid);
-	pthread_mutex_unlock(&uidMutex);
-
-	asprintf(&gidHeader, (char *) "%" PRIu64 " %s", (uint64_t) fileInfo->st_gid, gid->gr_name);
-	asprintf(&uidHeader, (char *) "%" PRIu64 " %s", (uint64_t) fileInfo->st_uid, uid->pw_name);
-
 	AmzHeaders *amzHeaders = new AmzHeaders();
-	if (this->makeAllPublic) {
-		amzHeaders->add((char *) "x-amz-acl", (char *) "public-read");
-	} else { 
-		amzHeaders->add((char *) "x-amz-acl", (char *) "private");
-	}
-	amzHeaders->add((char *) "x-amz-meta-gid", gidHeader);
-	amzHeaders->add((char *) "x-amz-meta-mode", (char *) "%o", fileInfo->st_mode);
-	amzHeaders->add((char *) "x-amz-meta-mtime", (char *) "%llu", (uint64_t) fileInfo->st_mtime);
-	amzHeaders->add((char *) "x-amz-meta-uid", uidHeader);
+
+	Uploader::addUidAndGidHeaders(fileInfo->st_uid, fileInfo->st_gid, amzHeaders);
+
+	amzHeaders->add((char *) "x-amz-acl", this->makeAllPublic ? (char *) "public-read" : (char *) "private");
 
 	if (this->useRrs) {
 		amzHeaders->add((char *) "x-amz-storage-class",(char *) "REDUCED_REDUNDANCY");
 	}
 
-	free(gidHeader);
-	free(uidHeader);
+	amzHeaders->add((char *) "x-amz-meta-mode", (char *) "%o", fileInfo->st_mode);
+	amzHeaders->add((char *) "x-amz-meta-mtime", (char *) "%llu", (uint64_t) fileInfo->st_mtime);
 
 	char *amzHeadersToSign = amzHeaders->serializeIntoStringToSign();
 
@@ -217,22 +217,13 @@ CURLcode Uploader::uploadFile(
 
 	struct curl_slist *slist = NULL;
 
-	char *dateHeader;
-	asprintf(&dateHeader, "Date: %s", date);
-	slist = curl_slist_append(slist, dateHeader);
+	slist = AmzHeaders::addHeader(slist, "Date", date);
 	free(date);
-	free(dateHeader);
 
-	char *authorizationHeader;
-	asprintf(&authorizationHeader, "Authorization: %s", authorization);
-	slist = curl_slist_append(slist, authorizationHeader);
+	slist = AmzHeaders::addHeader(slist, "Authorization", authorization);
 	free(authorization);
-	free(authorizationHeader);
 
-	char *contentTypeHeader;
-	asprintf(&contentTypeHeader, "Content-Type: %s", contentType);
-	slist = curl_slist_append(slist, contentTypeHeader);
-	free(contentTypeHeader);
+	slist = AmzHeaders::addHeader(slist, "Content-type", contentType);
 
 	slist = curl_slist_append(slist, "Expect:");
 
@@ -428,7 +419,14 @@ void *uploader_runOverThreadFunc(void *arg) {
 	pthread_exit(NULL);
 }
 
-void Uploader::runOverThread(uint8_t threadNumber, FileListStorage *fileListStorage, char *realLocalPath, char *path, char *contentType, struct stat *fileInfo) {
+void Uploader::runOverThread(
+	uint8_t threadNumber, 
+	FileListStorage *fileListStorage, 
+	char *realLocalPath, 
+	char *path, 
+	char *contentType, 
+	struct stat *fileInfo
+) {
 	char errorResult[1024*20];
 	errorResult[0]=0;
 

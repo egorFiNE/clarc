@@ -20,6 +20,7 @@ extern "C" {
 
 #include "remoteListOfFiles.h"
 #include "amazonCredentials.h"
+#include "amzHeaders.h"
 #include "threads.h"
 #include "settings.h"
 
@@ -227,17 +228,11 @@ int RemoteListOfFiles::performGetOnBucket(char *url, char *marker, int setLocati
 
 	struct curl_slist *slist = NULL;
 
-	char *dateHeader;
-	asprintf(&dateHeader, "Date: %s", date);
-	slist = curl_slist_append(slist, dateHeader);
+	slist = AmzHeaders::addHeader(slist, "Date", date);
 	free(date);
-	free(dateHeader);
 
-	char *authorizationHeader;
-	asprintf(&authorizationHeader, "Authorization: %s", authorization);
-	slist = curl_slist_append(slist, authorizationHeader);
+	slist = AmzHeaders::addHeader(slist, "Authorization", authorization);
 	free(authorization);
-	free(authorizationHeader);
 
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
 	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
@@ -401,17 +396,9 @@ int RemoteListOfFiles::performHeadOnFile(char *url, char *remotePath, uint32_t *
 
 	struct curl_slist *slist = NULL;
 
-	char *dateHeader;
-	asprintf(&dateHeader, "Date: %s", date);
-	slist = curl_slist_append(slist, dateHeader);
-	free(date);
-	free(dateHeader);
-
-	char *authorizationHeader;
-	asprintf(&authorizationHeader, "Authorization: %s", authorization);
-	slist = curl_slist_append(slist, authorizationHeader);
+	slist = AmzHeaders::addHeader(slist, "Date", date);
+	slist = AmzHeaders::addHeader(slist, "Authorization", authorization);
 	free(authorization);
-	free(authorizationHeader);
 
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
 	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
