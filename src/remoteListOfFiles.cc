@@ -356,14 +356,14 @@ int RemoteListOfFiles::downloadList() {
 int RemoteListOfFiles::performHeadOnFile(char *url, char *remotePath, uint32_t *remoteMtime, uint32_t *statusCode, char *errorResult) {
 	char method[5]="HEAD";
 
-	char *date = getIsoDate(); 
-
 	CURL *curl = curl_easy_init();
 
 	char *escapedRemotePath=curl_easy_escape(curl, remotePath, 0);
 	
 	char *canonicalizedResource;
 	asprintf(&canonicalizedResource, "/%s/%s", amazonCredentials->bucket, escapedRemotePath);
+
+	char *date = getIsoDate(); 
 
 	char *stringToSign;
 	asprintf(&stringToSign, "%s\n\n%s\n%s\n%s", method, "", date, canonicalizedResource);
