@@ -264,7 +264,10 @@ int parseCommandline(int argc, char *argv[]) {
 	}
 
 	if (accessKeyId==NULL) {
-		accessKeyId=strdup(getenv("S3_ACCESSKEYID"));
+		char *candidate = getenv("S3_ACCESSKEYID");
+		if (candidate!=NULL) {
+			accessKeyId=strdup(candidate);
+		}
 	} 
 
 	if (!accessKeyId) {
@@ -273,7 +276,10 @@ int parseCommandline(int argc, char *argv[]) {
 	}
 
 	if (secretAccessKey==NULL) {
-		secretAccessKey=strdup(getenv("S3_SECRETACCESSKEY"));
+		char *candidate = getenv("S3_SECRETACCESSKEY");
+		if (candidate!=NULL) {
+			secretAccessKey=strdup(candidate);
+		}
 	} 
 
 	if (!secretAccessKey) {
