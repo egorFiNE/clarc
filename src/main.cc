@@ -411,7 +411,10 @@ int main(int argc, char *argv[]) {
 	if (performUpload) {
 		excludeFilePattern->addDatabase(databaseFilename);
 
-		Uploader *uploader = new Uploader(amazonCredentials, excludeFilePattern);
+		LocalFileList *localFileList = new LocalFileList(excludeFilePattern);
+		localFileList->recurseIn((char *) "", source);
+
+		Uploader *uploader = new Uploader(amazonCredentials);
 		uploader->useRrs = useRrs;
 		uploader->makeAllPublic = makeAllPublic;
 		uploader->showProgress = showProgress;
@@ -432,24 +435,25 @@ int main(int argc, char *argv[]) {
 #ifdef TEST
 		do {
 #endif
-		res = uploader->uploadFiles(fileListStorage, source);
-		if (res==UPLOAD_FAILED) {
-			exit(1);
+
+		res = uploader->uploadFiles(fileListStorage, localFileList, source);
+		if (res==UPLOAD_SUCCESS) {
+			res = uploader->uploadDatabase(databaseFilePath, databaseFilename);
+			if (res==UPLOAD_FAILED) {
+			}
 		}
+
 #ifdef TEST
 		fileListStorage->truncate();
 		} while (true);
 #endif
 
-		res = uploader->uploadDatabase(databaseFilePath, databaseFilename);
-		if (res==UPLOAD_FAILED) {
-			exit(1);
-		}
-
+		delete localFileList;
 		delete uploader;
 	}
 
 	free(databaseFilePath);
+
 	delete fileListStorage;
 	delete amazonCredentials;
 

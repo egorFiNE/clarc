@@ -69,9 +69,8 @@ void Uploader::progress(char *path, double uploadedBytes, double ulnow, double u
 	}
 }
 
-Uploader::Uploader(AmazonCredentials *amazonCredentials, FilePattern *excludeFilePattern) {
+Uploader::Uploader(AmazonCredentials *amazonCredentials) {
 	this->amazonCredentials = amazonCredentials;
-	this->excludeFilePattern = excludeFilePattern;
 	this->totalSize=0;
 	this->uploadedSize=0;
 	this->lastProgressUpdate = 0;
@@ -91,7 +90,6 @@ Uploader::Uploader(AmazonCredentials *amazonCredentials, FilePattern *excludeFil
 
 Uploader::~Uploader() {
 	this->amazonCredentials = NULL;
-	this->excludeFilePattern = NULL;
 
 	pthread_mutex_destroy(&uidMutex);
 }
@@ -485,10 +483,7 @@ char *Uploader::createRealLocalPath(char *prefix, char *path) {
 	return realLocalPath;
 }
 
-int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
-	LocalFileList *files = new LocalFileList(this->excludeFilePattern);
-	files->recurseIn((char *) "", prefix);
-
+int Uploader::uploadFiles(FileListStorage *fileListStorage, LocalFileList *files, char *prefix) {
 	this->totalSize = files->calculateTotalSize();
 	char *hrSizeString = hrSize(this->totalSize);
 	LOG(LOG_INFO, "[Upload] Total size of files: %s", hrSizeString);
@@ -514,7 +509,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 		struct stat *fileInfo = (struct stat *) malloc(sizeof(struct stat));
 
 		if (lstat(realLocalPath, fileInfo)<0) {
-			LOG(LOG_ERR, "[Upload] FAIL %s: Cannot open file: %s", path, strerror(errno));
+			LOG(LOG_ERR, "[Upload] FAIL %s: Cannot stat file: %s", path, strerror(errno));
 			free(realLocalPath);
 			free(fileInfo);
 			this->uploadedSize+=files->sizes[i];
@@ -537,7 +532,8 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 			LOG(LOG_FATAL, "[Upload] FAIL %s: Oops, database query failed", path);
 			free(realLocalPath);
 			free(fileInfo);
-			return UPLOAD_FAILED;
+			this->failed=1;
+			continue;
 		}
 
 		if (res>0 && mtime == (uint64_t) fileInfo->st_mtime) {
@@ -590,8 +586,6 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 	pthread_attr_destroy(&attr);
 
 	LOG(LOG_INFO, "[Upload] Finished %s                     ", this->failed ? "with errors" : "successfully");
-
-	delete files;
 
 	return this->failed ? UPLOAD_FAILED : UPLOAD_SUCCESS;
 }

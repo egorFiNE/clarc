@@ -19,7 +19,6 @@ class Uploader
 private: 
 	AmazonCredentials *amazonCredentials;
 	time_t lastProgressUpdate;
-	FilePattern *excludeFilePattern;
 	int failed;
 
 	int uploadFileWithRetry(
@@ -56,7 +55,7 @@ private:
 
 public:
 	Threads *threads;
-	Uploader(AmazonCredentials *amazonCredentials, FilePattern *excludeFilePattern);
+	Uploader(AmazonCredentials *amazonCredentials);
 	~Uploader();
 
 	uint64_t totalSize;
@@ -71,7 +70,7 @@ public:
 	int uploadThreads;
 
 	void progress(char *path, double uploadedBytes, double ulnow, double ultotal);
-	int uploadFiles(FileListStorage *fileListStorage, char *prefix);
+	int uploadFiles(FileListStorage *fileListStorage, LocalFileList *files, char *prefix);
 	int uploadDatabase(char *databasePath, char *databaseFilename);
 	void runOverThread(uint8_t threadNumber, FileListStorage *fileListStorage, char *realLocalPath, char *path, char *contentType, struct stat *fileInfo);
 };
