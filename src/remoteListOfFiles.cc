@@ -459,6 +459,7 @@ void *remoteListOfFiles_runOverThreadFunc(void *arg) {
 
 void RemoteListOfFiles::runOverThread(int threadNumber, int pos) {
 	if (this->failed) {
+		this->threads->markFree(threadNumber);
 		return;
 	}
 
