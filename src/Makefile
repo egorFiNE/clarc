@@ -1,6 +1,6 @@
 VERSION=0.0.5
-BASIC_FLAGS=-Ofast -pg -Wall -D_FILE_OFFSET_BITS=64 `xml2-config --cflags` -DVERSION=\"$(VERSION)\" -Wno-write-strings -ftrapv -pthread -funsafe-loop-optimizations -ftracer  -fvariable-expansion-in-unroller -fprefetch-loop-arrays  -ffast-math  -mfpmath=sse -ftrapv -fstack-check
-LDFLAGS_BASIC=`xml2-config --libs` -L/usr/local/lib -lcurl /usr/local/lib/libre2.a -pg
+BASIC_FLAGS=-Ofast -Wall -D_FILE_OFFSET_BITS=64 `xml2-config --cflags` -DVERSION=\"$(VERSION)\" -Wno-write-strings -ftrapv -pthread -funsafe-loop-optimizations -ftracer  -fvariable-expansion-in-unroller -fprefetch-loop-arrays  -ffast-math  -mfpmath=sse -ftrapv -fstack-check
+LDFLAGS_BASIC=`xml2-config --libs` -L/usr/local/lib -lcurl /usr/local/lib/libre2.a
 
 UNAME := $(shell uname)
 ifeq ($(UNAME), Linux)
