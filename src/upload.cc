@@ -362,7 +362,7 @@ int Uploader::uploadFileWithRetry(
 		}
 
 		if (HTTP_SHOULD_RETRY_ON(res)) {
-			LOG(LOG_WARN, "[Upload] Retrying %s after a short sleep", remotePath);
+			LOG(LOG_WARN, "[Upload] %s failed (%s), retrying soon", remotePath, curl_easy_strerror(res));
 			int sleepTime = cUploads*RETRY_SLEEP_TIME; 
 			sleep(sleepTime);
 		} else { 
