@@ -135,6 +135,12 @@ void Uploader::addUidAndGidHeaders(uid_t uid, gid_t gid, AmzHeaders *amzHeaders)
 	free(uidHeader);	
 }
 
+
+size_t readFunctionForSoftlinkUpload(void *ptr, size_t size, size_t nmemb, void *userdata)  {
+	strcpy((char *)ptr, (char*) userdata);
+	return strlen((char*)userdata);
+}
+
 CURLcode Uploader::uploadFile(
 	char *localPath, 
 	char *remotePath, 
@@ -147,10 +153,15 @@ CURLcode Uploader::uploadFile(
 ) {
 	char method[4] = "PUT";
 
-	FILE *fin = fopen(localPath, "rb");
-	if (!fin) {
-		sprintf(errorResult, "Cannot open file %s: %s", localPath, strerror(errno));
-		return UPLOAD_FILE_FUNCTION_FAILED;
+	int isSoftLink = (fileInfo->st_mode & S_IFLNK)==S_IFLNK ? 1 : 0;
+
+	FILE *fin;
+	if (!isSoftLink) {
+		fin = fopen(localPath, "rb");
+		if (!fin) {
+			sprintf(errorResult, "Cannot open file %s: %s", localPath, strerror(errno));
+			return UPLOAD_FILE_FUNCTION_FAILED;
+		}
 	}
 
 	char *date = getIsoDate();
@@ -170,6 +181,19 @@ CURLcode Uploader::uploadFile(
 
 	amzHeaders->add((char *) "x-amz-meta-mode", (char *) "%o", fileInfo->st_mode);
 	amzHeaders->add((char *) "x-amz-meta-mtime", (char *) "%llu", (uint64_t) fileInfo->st_mtime);
+
+	char *softLinkData = NULL;
+	if (isSoftLink) {
+		softLinkData = (char *) malloc(1024);
+		ssize_t linkLength = readlink(localPath, softLinkData, 1024);
+		if (softLinkData < 0) {
+			softLinkData = (char *) realloc(softLinkData, 1024*100);
+			linkLength = readlink(localPath, softLinkData, 1024*100); // eat this
+		}
+		softLinkData[linkLength]=0;
+		amzHeaders->add((char *) "x-amz-meta-symlink", softLinkData);
+		amzHeaders->add((char *) "x-amz-meta-localpath", localPath);
+	} 
 
 	char *amzHeadersToSign = amzHeaders->serializeIntoStringToSign();
 
@@ -207,13 +231,18 @@ CURLcode Uploader::uploadFile(
 	CurlResponseInit(&curlResponse);
 
 	curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
-	curl_easy_setopt(curl, CURLOPT_PUT, 1L);
-	//curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
 
 	curl_easy_setopt(curl, CURLOPT_URL, postUrl);
 	free(postUrl);
 
-	curl_easy_setopt(curl, CURLOPT_READDATA, fin);
+	if (isSoftLink) {
+		curl_easy_setopt(curl, CURLOPT_INFILESIZE, strlen(softLinkData));	
+		curl_easy_setopt(curl, CURLOPT_READDATA, softLinkData);
+		curl_easy_setopt(curl, CURLOPT_READFUNCTION, &readFunctionForSoftlinkUpload);
+	} else { 
+		curl_easy_setopt(curl, CURLOPT_READDATA, fin);
+		curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t) fileInfo->st_size);
+	}
 
 	struct curl_slist *slist = NULL;
 
@@ -252,16 +281,17 @@ CURLcode Uploader::uploadFile(
 	curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, (void *) uploadProgress);
 	curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0);
 
-	curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t) fileInfo->st_size);
-
 	char *curlErrors = (char *) malloc(CURL_ERROR_SIZE);
 	curlErrors[0]=0;
 	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, curlErrors);
 
-
 	CURLcode res = curl_easy_perform(curl);
 
-	fclose(fin); 
+	if (isSoftLink) {
+		free(softLinkData);
+	} else { 
+		fclose(fin); 
+	}
 
 	curl_slist_free_all(slist);
 	free(uploadProgress);
