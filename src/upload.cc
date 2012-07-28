@@ -606,7 +606,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 
 int Uploader::uploadDatabase(char *databasePath, char *databaseFilename) { 
 	struct stat fileInfo;
-	if (lstat(databasePath, &fileInfo)<0) {
+	if (stat(databasePath, &fileInfo)<0) {
 		LOG(LOG_FATAL, "[Upload] Oops database upload failed: file %s doesn't exists", databaseFilename);
 		return UPLOAD_FAILED;
 	}
