@@ -553,6 +553,7 @@ int RemoteListOfFiles::performHeadOnFile(char *url, char *remotePath, uint32_t *
 	struct curl_slist *slist = NULL;
 
 	slist = AmzHeaders::addHeader(slist, "Date", date);
+	free(date);
 	slist = AmzHeaders::addHeader(slist, "Authorization", authorization);
 	free(authorization);
 
