@@ -59,8 +59,9 @@ void Destination::parse(char *destination) {
 	if (slash!=NULL) {
 		*slash=0;
 		this->folder = strdup(slash+1);
-		if (this->folder[strlen(this->folder)-1]=='/') {
-			this->folder[strlen(this->folder)-1]=0;
+		int len = strlen(this->folder);
+		if (len>0 && this->folder[len-1]=='/') {
+			this->folder[len-1]=0;
 		}
 	} else { 
 		this->folder = strdup("");
