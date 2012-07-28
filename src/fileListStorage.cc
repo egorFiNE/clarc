@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include "fileListStorage.h"
+#include "localFileList.h"
 
 int FileListStorage::createTable() {
 	return sqlite3_exec(
@@ -195,3 +196,65 @@ int FileListStorage::storeRemoteListOfFiles(RemoteListOfFiles *remoteListOfFiles
 	sqlite3_finalize(stmt);
 	return STORAGE_SUCCESS;
 }
+
+
+int FileListStorage::calculateListOfFilesToDelete(LocalFileList *localFileList) {
+	char *sErrMsg = 0;
+	sqlite3_stmt *stmt = NULL;
+	const char *tail = 0;
+
+	char createTable[10240] = "CREATE TEMPORARY TABLE localFiles (" \
+		"filePath TEXT NOT NULL PRIMARY KEY)";
+	if (sqlite3_exec(this->sqlite, createTable, NULL, NULL, &sErrMsg) != SQLITE_OK) {
+		return STORAGE_FAILED;
+	}
+
+	if (sqlite3_exec(this->sqlite, "BEGIN TRANSACTION", NULL, NULL, &sErrMsg) != SQLITE_OK) {
+		return STORAGE_FAILED;
+	}
+
+	if (sqlite3_prepare_v2(this->sqlite, "INSERT INTO localFiles (filePath) VALUES (?)", 10240, &stmt, &tail) != SQLITE_OK) {
+		return STORAGE_FAILED;
+	}
+
+	for (uint32_t i=0;i<localFileList->count;i++) {
+		if (sqlite3_bind_text(stmt, 1, (localFileList->paths[i]+1), -1, SQLITE_TRANSIENT) != SQLITE_OK) {
+			return STORAGE_FAILED;
+		}
+
+		if (sqlite3_step(stmt) != SQLITE_DONE) {
+			return STORAGE_FAILED;
+		}
+
+		sqlite3_clear_bindings(stmt);
+		sqlite3_reset(stmt);
+	}
+
+	sqlite3_finalize(stmt);
+
+	if (sqlite3_exec(this->sqlite, "END TRANSACTION", NULL, NULL, &sErrMsg) != SQLITE_OK) {
+		return STORAGE_FAILED;
+	}
+
+	sqlite3_stmt *selectFileStmt=NULL;
+	
+	if (sqlite3_prepare(this->sqlite, "SELECT filePath FROM files WHERE files.filePath NOT IN (SELECT filePath FROM localFiles)", -1, &selectFileStmt, 0) != SQLITE_OK) {
+		return STORAGE_FAILED;
+	} 
+	
+	int s;
+	do {
+		s = sqlite3_step(selectFileStmt);
+		if (s == SQLITE_ROW) {
+			char *filePath = (char *)sqlite3_column_text(selectFileStmt, 0);
+			// FIXME here.
+		} else {
+			break;
+		}
+	} while (true);
+
+	sqlite3_finalize(selectFileStmt);
+
+	return STORAGE_SUCCESS;
+}
+

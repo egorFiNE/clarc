@@ -24,6 +24,7 @@ extern "C" {
 #include "upload.h"
 #include "filePattern.h"
 #include "destination.h"
+#include "deleter.h"
 
 static char *accessKeyId=NULL, *secretAccessKey=NULL,
 	*databasePath=NULL, *databaseFilename= (char *)".files.sqlite3",
@@ -438,8 +439,13 @@ int main(int argc, char *argv[]) {
 
 		res = uploader->uploadFiles(fileListStorage, localFileList, source);
 		if (res==UPLOAD_SUCCESS) {
+			// fileListStorage->calculateListOfFilesToDelete(localFileList);
+			
+			// Deleter *deleter = new Deleter(amazonCredentials, localFileList, fileListStorage);
+			// res = deleter->performDeletion();
+			// delete deleter;
 			res = uploader->uploadDatabase(databaseFilePath, databaseFilename);
-			if (res==UPLOAD_FAILED) {
+			if (res==UPLOAD_SUCCESS) {
 			}
 		}
 

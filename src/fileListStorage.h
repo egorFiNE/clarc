@@ -6,6 +6,7 @@ using namespace std;
 
 #include "sqlite3.h"
 #include "remoteListOfFiles.h"
+#include "localFileList.h"
 
 #define STORAGE_FAILED 0
 #define STORAGE_SUCCESS 1
@@ -25,6 +26,8 @@ public:
 	int store(char *remotePath, char *md5, uint64_t mtime);
 	int storeRemoteListOfFiles(RemoteListOfFiles *remoteListOfFiles);
 	int truncate();
+	int calculateListOfFilesToDelete(LocalFileList *localFileList);
+
 };
 
 #endif
