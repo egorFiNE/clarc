@@ -303,47 +303,14 @@
 
 <h2 id="todo">TODO</h2>
 
-<h3>Client-side encryption</h3> 
-
-<p>
-	As much as I trust Amazon I don't trust myself securely storing keys and someone else stealing my data. Therefore <b>clarc</b>  must 
-	(optionally of course) encrypt files before they are uploaded to Amazon S3.
-</p>
-
-<h3>Delete obsoleted files from S3</h3> 
-
-<p>
-	This feature is dangerous and absolutely not as simple as it looks. Before I begin implementing it I have to 
-	make sure the core of the application works good enough so that it properly generates and propagates error codes
-	thru the code. 
-</p>
-
-<p>
-	When the upload finishes with no errors and all files were uploaded correctly I can rescan the file system and
-	issue multiple DELETE command on the S3 bucket to delete files that don't exists anymore locally. This will only 
-	be done if additional option is specified on the commandline (<code>--delete</code>).
-</p>
-
-<h3>Script (config files)</h3> 
-
-<p>
-	Essentially this is just command line parsing from file instead of the command line. So instead of calling <code>clarc ...</code> you will invoce <code>clarc ./backup.ini</code> or something.
-</p>
-
-<h3>Check UID, GID and mode changes</h3>
-
-<p>
-	Right now file and metadata is not updated on Amazon S3 if this is the only thing that changed. 
-</p>
-
-<h3>Restore</h3>
+<h3>Download from S3</h3>
 
 <p>
 	Only one direction is implemented now: uploads from local folder to S3. Surely the other way is also required: download of the remote files into local folder. While it is possible to use other tools to download files (plenty are available), none of them recovers the metadata (UID, GID, permissions, etc). <b>clarc</b> should be able to restore folder as it was. 
 </p>
 
 <p>
-	<b>NOTE: clarc DOES store metadata information with Amazon, so you can safely use it for backups right now.</b> Once the download feature will be implemented, clarc will be able to download and restore already made backups.
+	<b>NOTE: <b>clarc</b> DOES store metadata information with Amazon, so you can safely use it for backups right now.</b> Once the download feature will be implemented, <b>clarc</b> will be able to download and restore already made backups.
 </p>
 
 <h3>Other pending enhancements</h3>
