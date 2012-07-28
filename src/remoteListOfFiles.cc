@@ -279,6 +279,161 @@ int RemoteListOfFiles::performGetOnBucket(char *url, char *marker, int setLocati
 	}
 }
 
+size_t readFunctionForRegionCreate(void *ptr, size_t size, size_t nmemb, void *userdata)  {
+	strcpy((char *)ptr, (char*) userdata);
+	return strlen((char*)userdata);
+}
+
+int RemoteListOfFiles::performPutOnBucket(char *url, char *region, uint32_t *statusCode, char *errorResult) {
+	char method[4]="PUT";
+
+	char *date = getIsoDate(); 
+
+	CURL *curl = curl_easy_init();
+
+	char *canonicalizedResource;
+	asprintf(&canonicalizedResource, "/%s/", amazonCredentials->bucket);
+
+	AmzHeaders *amzHeaders = new AmzHeaders();
+	amzHeaders->add((char *) "x-amz-acl", (char *) "private");
+	char *amzHeadersToSign = amzHeaders->serializeIntoStringToSign();
+
+	char *stringToSign;
+	asprintf(&stringToSign, "%s\n\n%s\n%s\n%s%s", method, "", date, amzHeadersToSign, canonicalizedResource); 
+	free(canonicalizedResource);
+	free(amzHeadersToSign);
+
+	char *authorization = amazonCredentials->createAuthorizationHeader(stringToSign); 
+	free(stringToSign);
+
+	if (authorization == NULL) {
+		free(date);
+		curl_easy_cleanup(curl);		
+		strcpy(errorResult, "Error in auth module");
+		return LIST_FAILED;
+	}
+
+	char *postUrl;
+	if (url) {
+		postUrl = strdup(url);
+	} else {
+		postUrl = amazonCredentials->generateUrlForBucketCreate(this->useSsl);
+	}
+
+	struct CurlResponse curlResponse;
+	CurlResponseInit(&curlResponse);
+
+	curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+
+	char *createBucketData = NULL;
+	if (strcmp(region, "")==0 || strcmp(region, "US")==0) {
+		curl_easy_setopt(curl, CURLOPT_INFILESIZE, 0);
+	} else { 
+		asprintf(&createBucketData, "<CreateBucketConfiguration xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" \
+			"<LocationConstraint>%s</LocationConstraint></CreateBucketConfiguration>\n", region);
+
+		curl_easy_setopt(curl, CURLOPT_READDATA, createBucketData);
+		curl_easy_setopt(curl, CURLOPT_READFUNCTION, &readFunctionForRegionCreate);
+		curl_easy_setopt(curl, CURLOPT_INFILESIZE, strlen(createBucketData));
+	}
+
+	curl_easy_setopt(curl, CURLOPT_URL, postUrl);
+	LOG(LOG_DBG, "[Create Bucket] PUT %s", postUrl);
+	free(postUrl);
+
+	struct curl_slist *slist = NULL;
+
+	slist = AmzHeaders::addHeader(slist, "Date", date);
+	free(date);
+
+	slist = AmzHeaders::addHeader(slist, "Authorization", authorization);
+	free(authorization);
+
+	slist = curl_slist_append(slist, "Expect:");
+
+	slist = amzHeaders->serializeIntoCurl(slist);
+	delete amzHeaders;
+
+	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
+	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+
+	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, this->connectTimeout);
+	curl_easy_setopt(curl, CURLOPT_MAXCONNECTS, MAXCONNECTS);
+	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->networkTimeout);
+	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, LOW_SPEED_LIMIT);
+
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&curlResponse);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlResponseBodyCallback);
+
+	curl_easy_setopt(curl, CURLOPT_WRITEHEADER, (void *)&curlResponse); 
+	curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, &CurlResponseHeadersCallback);
+
+	CURLcode res = curl_easy_perform(curl);
+
+	if (createBucketData!=NULL) {
+		free(createBucketData);
+	}
+
+	curl_slist_free_all(slist);
+
+	*statusCode = 0;
+
+	if (res==CURLE_OK) {
+		long httpStatus = 0;
+		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpStatus);
+		*statusCode = (uint32_t) httpStatus;
+
+		if (httpStatus==307) {
+			extractLocationFromHeaders(curlResponse.headers, errorResult);
+		}
+
+		curl_easy_cleanup(curl);
+		CurlResponseFree(&curlResponse);
+
+		return CREATE_SUCCESS;
+
+	} else { 
+		strcpy(errorResult, "Error performing request");
+		curl_easy_cleanup(curl);
+		CurlResponseFree(&curlResponse);
+		return CREATE_FAILED;
+	}
+}
+
+int RemoteListOfFiles::createBucket(char *region) {
+	char *url = NULL;
+	do {
+		char errorResult[1024*100];
+		errorResult[0]=0;
+		uint32_t statusCode=0;
+
+		int res = this->performPutOnBucket(url, region, &statusCode, errorResult);
+
+		if (url!=NULL) {
+			free(url);
+			url=NULL;
+		}
+
+		if (res==CREATE_FAILED) {
+			LOG(LOG_FATAL, "[BucketCreate] FAIL: %s", errorResult);
+			return CREATE_FAILED;
+		}
+
+		if (statusCode==307) {
+			url = strdup(errorResult); 
+			LOG(LOG_INFO, "[BucketCreate] Retrying: Amazon asked to repeat to: %s", url);
+			continue;
+
+		} else if (statusCode!=200) {
+			LOG(LOG_FATAL, "[BucketCreate] FAIL: HTTP status=%d", statusCode);
+			return CREATE_FAILED;
+
+		} else if (statusCode==200) {
+			return CREATE_SUCCESS;
+		}
+	} while (true);
+}
+
 int RemoteListOfFiles::downloadList() {
 	uint32_t statusCode = 0;
 	char lastKey[1024*100] = "";

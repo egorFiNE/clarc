@@ -27,6 +27,26 @@ AmazonCredentials::~AmazonCredentials() {
 	this->endPoint=NULL;
 }
 
+int AmazonCredentials::isValidRegionForBucketCreate(char *region) {
+	return (
+		strcmp(region, "") == 0 || 
+		strcmp(region, "US") == 0 || 
+		strcmp(region, "EU") == 0 || 
+		strcmp(region, "eu-west-1") == 0 || 
+		strcmp(region, "us-west-1") == 0 || 
+		strcmp(region, "us-west-2") == 0 || 
+		strcmp(region, "ap-southeast-1") == 0 || 
+		strcmp(region, "ap-northeast-1") == 0 || 
+		strcmp(region, "sa-east-1") == 0
+	);
+}
+
+char *AmazonCredentials::generateUrlForBucketCreate(int useSsl) {
+	char *resultUrl;
+	asprintf(&resultUrl, "%s://%s.s3.amazonaws.com/", useSsl?"https":"http", this->bucket);
+	return resultUrl;
+}
+
 char *AmazonCredentials::generateUrl(char *remotePath, int useSsl) {
 	if (remotePath==NULL) {
 		return NULL;

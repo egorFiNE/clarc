@@ -19,6 +19,7 @@ OPTIONS:
   --rrs                     Use Reduced Redundancy Storage on S3.
   --public                  Make all files public. 
   --skipSsl                 Do not use SSL when connecting to S3. 
+  --create <region>         Create bucket if it doesn't exist.
   --exclude <pattern>       Ignore files/folders according to regexp. 
   --excludeFromFile <path>  Read a list of exclude patterns from file.
   --progress                Show progress indicator.
@@ -33,6 +34,6 @@ OPTIONS:
 Example:
   clarc  --accessKeyId XXX  --secretAccessKey YYY  --rebuild  --rrs  /home/egor/Pictures/  s3://pics.egorfine.com.s3-eu-west-1.amazonaws.com/
 
-  clarc  --accessKeyId XXX  --secretAccessKey YYY  --exclude .+\\.m4a$   --exclude \\/Justin\\ Bieber\\/.+$  --progress  /home/egor/Music/  s3://music.egorfine.com/
+  clarc  --accessKeyId XXX  --secretAccessKey YYY  --create US  --exclude .+\\.m4a$   --exclude \\/Justin\\ Bieber\\/.+$  --progress  /home/egor/Music/  s3://music.egorfine.com/
 
 There's more: see also man clarc. 

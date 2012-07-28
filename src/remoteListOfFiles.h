@@ -27,6 +27,7 @@ private:
 	int parseListOfFiles(char *body, uint64_t bodySize, uint8_t *isTruncated, char *lastKey, char *errorResult);
 	int performGetOnBucket(char *url, char *marker, int setLocationHeader, char *body, uint64_t *bodySize, uint32_t *statusCode, char *errorResult);
 	int performHeadOnFile(char *url, char *remotePath, uint32_t *remoteMtime, uint32_t *statusCode, char *errorResult);
+	int performPutOnBucket(char *url, char *region, uint32_t *statusCode, char *errorResult);
 
 public:
 	RemoteListOfFiles(AmazonCredentials *amazonCredentials);
@@ -37,8 +38,9 @@ public:
 	int resolveMtimes();
 
 	int checkAuth();
-	void runOverThread(int threadNumber, int pos);
+	int createBucket(char *region);
 
+	void runOverThread(int threadNumber, int pos);
 
 	char **paths;
 	char **md5s;
@@ -55,6 +57,9 @@ public:
 
 #define HEAD_FAILED 0
 #define HEAD_SUCCESS 1
+
+#define CREATE_FAILED 0
+#define CREATE_SUCCESS 1
 
 #define AUTH_FAILED 0
 #define AUTH_FAILED_BUCKET_DOESNT_EXISTS -1

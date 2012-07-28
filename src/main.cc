@@ -27,9 +27,9 @@ extern "C" {
 
 static char *accessKeyId=NULL, *secretAccessKey=NULL,
 	*databasePath=NULL, *databaseFilename= (char *)".files.sqlite3",
-	*source = NULL;
+	*source = NULL, *autoCreateBucketRegion = NULL;
 static int performRebuild=0, performUpload=1, makeAllPublic=0, useRrs=0, showProgress=0, skipSsl=0, dryRun=0,
-	connectTimeout = 0, networkTimeout = 0, uploadThreads = 0;
+	connectTimeout = 0, networkTimeout = 0, uploadThreads = 0, autoCreateBucket = 0;
 
 FilePattern *excludeFilePattern;
 Destination *destination;
@@ -103,6 +103,7 @@ int parseCommandline(int argc, char *argv[]) {
 		{ "rrs",               no_argument,        NULL,  0 },
 		{ "rss",               no_argument,        NULL,  0 }, // common typo
 		{ "skipSsl",           no_argument,        NULL,  0 },
+		{ "create",            required_argument,  NULL,  0 },
 
 		{ "connectTimeout",    required_argument,  NULL,  0 },
 		{ "networkTimeout",    required_argument,  NULL,  0 },
@@ -151,6 +152,15 @@ int parseCommandline(int argc, char *argv[]) {
 		} else if (strcmp(longName, "secretAccessKey")==0) {
 			secretAccessKey = strdup(optarg);
 			clearString(optarg); // hide credentials from process list
+
+		} else if (strcmp(longName, "create")==0) {
+			autoCreateBucket = 1;
+			autoCreateBucketRegion = strdup(optarg);
+
+			if (!AmazonCredentials::isValidRegionForBucketCreate(autoCreateBucketRegion)) {
+				printf("Region \"%s\" is not valid.\n", autoCreateBucketRegion);
+				exit(1);
+			}
 
 		} else if (strcmp(longName, "networkTimeout")==0) {
 			networkTimeout = atoi(optarg);
@@ -358,8 +368,18 @@ int main(int argc, char *argv[]) {
 
 	res = remoteListOfFiles->checkAuth();
 	if (res == AUTH_FAILED_BUCKET_DOESNT_EXISTS) {
-		LOG(LOG_FATAL, "[Auth] Failed: bucket doesn't exists, exit");
-		exit(1);		
+		if (autoCreateBucket) { 
+			res = remoteListOfFiles->createBucket(autoCreateBucketRegion);
+			if (res==CREATE_SUCCESS) {
+				LOG(LOG_INFO, "[BucketCreate] Created bucket %s in region %s", amazonCredentials->bucket, autoCreateBucketRegion);
+			} else { 
+				exit(1);
+			}
+		} else { 
+			LOG(LOG_FATAL, "[Auth] Failed: bucket doesn't exists and no --create supplied");
+			exit(1);		
+		}
+
 	} else if (res == AUTH_FAILED) {
 		LOG(LOG_FATAL, "[Auth] FAIL, exit");
 		exit(1);		
@@ -384,7 +404,7 @@ int main(int argc, char *argv[]) {
 
 	if (performUpload) {
 		excludeFilePattern->addDatabase(databaseFilename);
-		
+
 		Uploader *uploader = new Uploader(amazonCredentials, excludeFilePattern);
 		uploader->useRrs = useRrs;
 		uploader->makeAllPublic = makeAllPublic;
