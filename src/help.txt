@@ -1,65 +1,38 @@
 Usage: 
-    clarc MODE [OPTIONS] SOURCE DEST
+  clarc [OPTIONS] SOURCE DEST
 
-MODE should be one or both of: 
-    --upload      actually upload files to Amazon S3
-    --rebuild     download files list and meta information
-                  from Amazon S3 and rebuild local database
-
-SOURCE is the path to folder that is being uploaded.
-
+SOURCE is the absolute path to folder that is being uploaded.
 DEST is the Amazon S3 destination in format:
 
-    s3://BUCKET[.ENDPOINT]/
+  s3://BUCKET[.ENDPOINT]/
+
+Amazon AWS credentials: 
+  --accessKeyId <string> 
+  --secretAccessKey <string> 
+
+  You can also specify them in environment variables 
+  S3_ACCESSKEYID and S3_SECRETACCESSKEY instead of
+  the command line.
 
 OPTIONS:
-    --accessKeyId <string> (*)
-    --secretAccessKey <string> (*)   Amazon AWS credentials
-
-      (you can also specify them in environment variables 
-       S3_ACCESSKEYID and S3_SECRETACCESSKEY instead of
-       the command line)
-
-    --rrs                   Use Reduced Redundancy Storage on S3.
-    --public                Make all files public. Default: private. 
-    --skipSsl               Do not use SSL when connecting to S3. 
-                            Useful if you are connecting within AWS.
-
-    --exclude <pattern>        Ignore certain files/folders according to 
-                               the Regular Expression pattern. There could 
-                               be more than a single --exclude argument.
-    --excludeFromFile <path>   The same as --exclude but will read a list 
-                               of exclude patterns from file instead of the 
-                               command-line argument. The patterns in file 
-                               must be newline-separated.
-
-    --progress          Show progress indicator for meta update and uploads.
-    --logLevel <int>    Set stdout log level from 1 (only fatals) to 5 (debug).
-                        Default is 2 (fatals and errors).
-
-    --uploadThreads <int>   Count of threads to spawn for upload. Default: 4.
-    --connectTimeout <sec>  Timeout for connect operation only. Default: 15.
-    --networkTimeout <sec>  How many seconds to wait till the stalled connection
-                            should be killed. Default: 15.
-
-    --dbPath <path>         Absolute path to local database file instead
-                            of the default path; by default it's the source 
-                            folder. Note: this argument MUST NOT specify 
-                            file name.
-    --dbFilename <string>   File name for the database;
-                            by default it's '.files.sqlite3'
-
-    --dryRun                Do not actually upload files; do not actually
-                            rebuild database.
-
-    --version               Ask for version number
-    --help                  Ask for something useful
-
-    (*) are mandatory
+  --rebuild                 Rebuild local database from DEST.
+  --rrs                     Use Reduced Redundancy Storage on S3.
+  --public                  Make all files public. 
+  --skipSsl                 Do not use SSL when connecting to S3. 
+  --exclude <pattern>       Ignore files/folders according to regexp. 
+  --excludeFromFile <path>  Read a list of exclude patterns from file.
+  --progress                Show progress indicator.
+  --logLevel <int>          Set log level from 1 (fatals) to 5 (debug).
+  --uploadThreads <int>     Threads to spawn for upload. Default: 4.
+  --connectTimeout <sec>    Timeout for connect. Default: 15.
+  --networkTimeout <sec>    Connection stall timeout. Default: 15.
+  --dryRun                  Do not actually do anything.
+  --version                 Ask for version number.
+  --help                    Ask for something useful.
 
 Example:
-    clarc  --accessKeyId UKIOIZZADUGFFDD7SFVF  --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  --rebuild  --upload --rrs  /home/egor/Pictures/  s3://pics.egorfine.com.s3-eu-west-1.amazonaws.com/
+  clarc  --accessKeyId XXX  --secretAccessKey YYY  --rebuild  --rrs  /home/egor/Pictures/  s3://pics.egorfine.com.s3-eu-west-1.amazonaws.com/
 
-    clarc  --upload --accessKeyId UKIOIZZADUGFFDD7SFVF  --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  --exclude .+\\.m4a$   --exclude \\/Justin\\ Bieber\\/.+$  --progress  /home/egor/Music/  s3://music.egorfine.com/
+  clarc  --accessKeyId XXX  --secretAccessKey YYY  --exclude .+\\.m4a$   --exclude \\/Justin\\ Bieber\\/.+$  --progress  /home/egor/Music/  s3://music.egorfine.com/
 
-See also man clarc. 
+There's more: see also man clarc. 

@@ -3,7 +3,7 @@
 clarc \- sync local files to Amazon S3 cloud storage
 .SH SYNOPSIS
 .B clarc
-\fIMODE\fR [\fIOPTION\fR]... \fISOURCE\fR \fIDEST\fR
+[\fIOPTION\fR]... \fISOURCE\fR \fIDEST\fR
 .SH DESCRIPTION
 .B clarc
 is a utility that synchronizes local file system folder to Amazon S3. Only files that were changed/added since last 
@@ -13,18 +13,6 @@ invocation are uploaded.
 .B clarc 
 keeps track of changes by storing file metadata in a small local database. It possible to quickly rebuild the database from Amazon S3.
 
-.SH MODE
-The first option for 
-.B clarc
-must be one or both of the following. If you specify both, then 
-.B rebuild 
-is done first. This is the most failsafe mode of operation. 
-.TP
-\fB\-\-upload\fR
-Actually upload files to Amazon S3.
-.TP
-\fB\-\-rebuild\fR
-Download files list and meta information from Amazon S3 and rebuild local database from scratch.
 .SH SOURCE
 \fISOURCE\fR is the path to folder that is being uploaded.
 .SH DEST
@@ -47,6 +35,9 @@ Ignore certain files/folders according to the Regular Expression pattern. There 
 The same as --exclude but will read a list of exclude patterns from file instead of the command-line argument. The patterns in file must be newline-separated.
 .SH AMAZON S3 OPTIONS
 .PP
+.TP
+\fB\-\-rebuild\fR
+Prior to uploading download files list and meta information from Amazon S3 and rebuild local database from scratch.
 .TP
 \fB\-\-accessKeyId <string>
 .B (*) 
@@ -115,6 +106,8 @@ How many seconds to wait till the stalled connection should be killed. Default: 
 .TP
 \fB\-\-dryRun
 Do not actually upload files; do not actually rebuild database. 
+\fB\-\-rebuildOnly
+Do not actually upload files, only run --rebuild.
 .TP 
 \fB\-\-version
 .TP
@@ -122,7 +115,7 @@ Do not actually upload files; do not actually rebuild database.
 .SH EXAMPLES
 See documentation for examples; this is a single one.
 
-  clarc --rebuild  --upload
+  clarc --rebuild 
         --accessKeyId UKIOIZZADUGFFDD7SFVF 
         --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  
         /home/egor/Music/  s3://music.egorfine.com/
