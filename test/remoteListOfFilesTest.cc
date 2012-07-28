@@ -72,17 +72,21 @@ START_TEST(RemoteListOfFiles_extractMtimeFromHeaders) {
 char *readXml(int num) {
 	char *path;
 	asprintf(&path, "./data/list/list-%d.xml", num);
-	free(path);
+
 	FILE *f = fopen(path, "r");
 	if (!f) {
+		free(path);
 		return NULL;
 	}
+	free(path);
+
 	uint32_t len = 2*1024*1024;
 
 	char *sirko = (char *)malloc(len); 
 	bzero(sirko, len);
 	size_t realBytes = fread(sirko, 1, len, f);
 	sirko = (char *)realloc(sirko, realBytes);
+
 	fclose(f);
 
 	return sirko;
