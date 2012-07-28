@@ -427,6 +427,10 @@ int RemoteListOfFiles::performHeadOnFile(char *url, char *remotePath, uint32_t *
 		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpStatus);
 		*statusCode = (uint32_t) httpStatus;
 
+		if (httpStatus==307) {
+			extractLocationFromHeaders(curlResponse.headers, errorResult);
+		}
+
 		*remoteMtime = RemoteListOfFiles::extractMtimeFromHeaders(curlResponse.headers);
 
 		curl_easy_cleanup(curl);
