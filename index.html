@@ -71,7 +71,7 @@
 	<div style="float: right; width: 200px;"><a class="download" href="#downloads">Downloads &darr;</a></div>
 </h2>
 
-<pre><code>clarc --upload <span class="codeBackslash">\</span>
+<pre><code>clarc <span class="codeBackslash">\</span>
       --accessKeyId UKIOIZZADUGFFDD7SFVF  <span class="codeBackslash">\</span>
       --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  <span class="codeBackslash">\</span>
       <span class="paramSource">/home/egor/Music/</span>  <span class="paramDest">s3://music.egorfine.com/</span></code></pre>
@@ -109,16 +109,6 @@
       --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  <span class="codeBackslash">\</span>
       <span class="paramSource">/home/egor/Music/</span>  <span class="paramDest">s3://music.egorfine.com</span></code></pre>
 
-
-<p>
-	<code>--upload</code> command instructs <b>clarc</b> to actually upload local folder to S3. You can combine both options. In this case the rebuild is done first, then files are uploaded: 
-</p>
-
-<pre><code>clarc --rebuild --upload <span class="codeBackslash">\</span>
-      --accessKeyId UKIOIZZADUGFFDD7SFVF  <span class="codeBackslash">\</span>
-      --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  <span class="codeBackslash">\</span>
-      <span class="paramSource">/home/egor/Music/</span>  <span class="paramDest">s3://music.egorfine.com/</span></code></pre>
-
 <h3>Retransmit algorythm and consistency issues</h3>
 
 <p>
@@ -149,7 +139,7 @@
 	<dt>--exclude <span class="argument">&lt;pattern&gt;</span></dt>
 	<dd>Ignore certain files/folders according to the Regular Expression pattern. Example:
 
-<pre>clarc --upload <span class="codeBackslash">\</span>
+<pre>clarc <span class="codeBackslash">\</span>
       --accessKeyId UKIOIZZADUGFFDD7SFVF  <span class="codeBackslash">\</span>
       --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  <span class="codeBackslash">\</span>
       --exclude <span class="paramExclude">.+\.m4a$</span> --exclude <span class="paramExclude">.+\.m4v$</span> <span class="codeBackslash">\</span>
@@ -167,6 +157,9 @@
 <h3>Amazon S3 options</h3>
 
 <dl>
+	<dt>--rebuild</dt>
+	<dd>Prior to uploading download files list and meta information from Amazon S3 and rebuild local database from scratch.</dd>
+
 	<dt>--accessKeyId <span class="argument">&lt;string&gt;</span>, --secretAccessKey <span class="argument">&lt;string&gt;</span> <span class="mandatory">*</span></dt>
 	<dd>Amazon S3 Access Credentials. Get them <a href="https://portal.aws.amazon.com/gp/aws/securityCredentials">here</a>. You can also specify them in environment variables <code>S3_ACCESSKEYID</code> and <code>S3_SECRETACCESSKEY</code> instead of the command line.
 
@@ -175,8 +168,12 @@
 
 	<dt>--public</dt>
 	<dd>Make all uploaded files publicly accessible on Amazon S3. By default all files are private.</dd>
+
+	<dt>--create <span class="argument">&lt;region&gt;</span></dt>
+	<dd>Create S3 bucket if it doesn't exists. Region must be one of:  <code>US</code> (default), <code>EU</code>, <code>eu-west-1</code>, <code>us-west-1</code>, <code>us-west-2</code>, <code>ap-southeast-1</code>, <code>ap-northeast-1</code>, <code>sa-east-1</code>. Bucket is always created with private ACL.</dd>
+
 	<dt>--skipSsl</dt>
-	<dd>Do not use SSL when connecting to S3. Useful if you are connecting within AWS.</dd> 
+	<dd>Do not use SSL when connecting to S3. It is significantly faster for <code>--rebuild</code> and quite useful if you are connecting within AWS.</dd> 
 </dl>
 
 <h3>Display options</h3>
@@ -226,6 +223,8 @@
 <h3>Misc options</h3>
 
 <dl>
+	<dt>--rebuildOnly</dt>
+	<dd>Do not actually upload files, only run <code>--rebuild</code>.</dd>
 	<dt>--dryRun</dt>
 	<dd>Do not actually upload files; do not actually rebuild database.</dd>
 	<dt>--version, --help</dt>
