@@ -21,6 +21,7 @@ public:
 	~FilePattern();
 
 	int add(char *pattern);
+	void addDatabase(char *databaseFilename);
 	int readFile(char *filename);
 
 	int matches(char *path);

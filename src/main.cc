@@ -383,11 +383,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (performUpload) {
-		if (excludeFilePattern->count==0) {
-			delete excludeFilePattern;
-			excludeFilePattern=NULL;
-		}
-
+		excludeFilePattern->addDatabase(databaseFilename);
+		
 		Uploader *uploader = new Uploader(amazonCredentials, excludeFilePattern);
 		uploader->useRrs = useRrs;
 		uploader->makeAllPublic = makeAllPublic;

@@ -39,6 +39,18 @@ int FilePattern::readFile(char *filename) {
 	return 0;
 }
 
+void FilePattern::addDatabase(char *databaseFilename) {
+	char *databaseFilenameToExclude;
+
+	asprintf(&databaseFilenameToExclude, "^\\/%s$", databaseFilename);
+	this->add(databaseFilenameToExclude);
+	free(databaseFilenameToExclude);
+
+	asprintf(&databaseFilenameToExclude, "^\\/%s-journal$", databaseFilename);
+	this->add(databaseFilenameToExclude);
+	free(databaseFilenameToExclude);
+}
+
 int FilePattern::add(char *pattern) {
 	if (this->count==this->size) {
 	 	this->size+=100;
