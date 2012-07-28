@@ -65,6 +65,4 @@ public:
 #define AUTH_FAILED_BUCKET_DOESNT_EXISTS -1
 #define AUTH_SUCCESS 1
 
-int checkAuth(AmazonCredentials *amazonCredentials);
-
 #endif
