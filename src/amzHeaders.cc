@@ -1,3 +1,5 @@
+#include <vector>
+#include <algorithm>
 #include <iostream>
 using namespace std;
 
@@ -38,18 +40,24 @@ void AmzHeaders::add(char *name, char *format, ...) {
 }
 
 char *AmzHeaders::serializeIntoStringToSign() {
-	// add 2 chars for each entry because each entry is joined by ":" and ended with \n
-	int len = this->namesLength + this->valuesLength + (this->count * 2) + 2;
-	char *result = (char *) malloc(len);
-	result[0]=0;
+	// okay here I cheat and use C++. Please forgive me or rewrite in plain C.
+	std::vector<std::string> headersList;
 	for (int i=0;i<this->count;i++) {
-		strcat(result, this->names[i]);
-		strcat(result, ":");
-		strcat(result, this->values[i]);
-		strcat(result, "\n");
+		char *header;
+		asprintf(&header, "%s:%s\n", this->names[i], this->values[i]);
+		headersList.push_back(header);
+		free(header);
 	}
 
-	return result;
+	std::sort(headersList.begin(), headersList.end());
+
+	std::string result;
+
+	for (int i=0;i<this->count;i++) {
+		result.append(headersList[i]);
+	}
+
+	return strdup((char *) result.c_str());
 }
 
 struct curl_slist *AmzHeaders::serializeIntoCurl(struct curl_slist *slist) {
