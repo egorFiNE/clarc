@@ -1,17 +1,17 @@
 VERSION=0.0.5
-BASIC_FLAGS=-O3 -Wall -D_FILE_OFFSET_BITS=64 `xml2-config --cflags` -DVERSION=\"$(VERSION)\" -Wno-write-strings -ftrapv -pthread
-LDFLAGS_BASIC=`xml2-config --libs` -L/usr/local/lib -lcurl /usr/local/lib/libre2.a
+BASIC_FLAGS=-Ofast -pg -Wall -D_FILE_OFFSET_BITS=64 `xml2-config --cflags` -DVERSION=\"$(VERSION)\" -Wno-write-strings -ftrapv -pthread -funsafe-loop-optimizations -ftracer  -fvariable-expansion-in-unroller -fprefetch-loop-arrays  -ffast-math  -mfpmath=sse -ftrapv -fstack-check
+LDFLAGS_BASIC=`xml2-config --libs` -L/usr/local/lib -lcurl /usr/local/lib/libre2.a -pg
 
 UNAME := $(shell uname)
 ifeq ($(UNAME), Linux)
 CFLAGS=$(BASIC_FLAGS)
-CXXFLAGS=$(BASIC_FLAGS) -Weffc++
+CXXFLAGS=$(BASIC_FLAGS)
 LDFLAGS=$(LDFLAGS_BASIC) -lsqlite3 
 endif
 
 ifeq ($(UNAME), Darwin)
 CFLAGS=$(BASIC_FLAGS) -D_DARWIN_FEATURE_64_BIT_INODE 
-CXXFLAGS=$(BASIC_FLAGS) -D_DARWIN_FEATURE_64_BIT_INODE  -Weffc++
+CXXFLAGS=$(BASIC_FLAGS) -D_DARWIN_FEATURE_64_BIT_INODE 
 LDFLAGS=$(LDFLAGS_BASIC) -lz -lssl -lcrypto ../libsqlite3.a
 endif
 
