@@ -473,7 +473,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 	pthread_attr_setstacksize(&attr, THREAD_STACK_SIZE);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
-	for (int i=0;i<files->count;i++) {
+	for (uint32_t i=0;i<files->count;i++) {
 		if (this->failed) {
 			break;
 		}

@@ -83,7 +83,7 @@ void clearString(char *str) {
 		return;
 	}
 
-	int i;
+	uint32_t i;
 	for(i=0;i<strlen(str);i++) {
 		str[i]='X';
 	}
