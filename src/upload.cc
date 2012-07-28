@@ -511,7 +511,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 		char *path = (files->paths[i]+1);
 		char *realLocalPath = Uploader::createRealLocalPath(prefix, path);
 		
-		struct stat *fileInfo = (struct stat *) malloc(sizeof(struct stat));;
+		struct stat *fileInfo = (struct stat *) malloc(sizeof(struct stat));
 
 		if (lstat(realLocalPath, fileInfo)<0) {
 			LOG(LOG_ERR, "[Upload] FAIL %s: Cannot open file: %s", path, strerror(errno));
@@ -520,15 +520,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, char *prefix) {
 			this->uploadedSize+=files->sizes[i];
 			continue;
 		}
-		
-		if (fileInfo->st_size==0) {
-			LOG(LOG_WARN, "[Upload] WARNING %s: Zero sized file, skipped", path);
-			free(realLocalPath);
-			free(fileInfo);
-			this->uploadedSize+=files->sizes[i];
-			continue;
-		}
-		
+				
 		if (fileInfo->st_size>=MAX_S3_FILE_SIZE) {
 			LOG(LOG_WARN, "[Upload] WARNING %s: File too large (%" PRIu64 " bytes while only %" PRIu64 " allowed), skipped", 
 				path, (uint64_t) fileInfo->st_size, (uint64_t) MAX_S3_FILE_SIZE);
