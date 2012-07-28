@@ -28,7 +28,7 @@ extern "C" {
 static char *accessKeyId=NULL, *secretAccessKey=NULL,
 	*databasePath=NULL, *databaseFilename= (char *)".files.sqlite3",
 	*source = NULL;
-static int performRebuild=0, performUpload=0, makeAllPublic=0, useRrs=0, showProgress=0, skipSsl=0, dryRun=0,
+static int performRebuild=0, performUpload=1, makeAllPublic=0, useRrs=0, showProgress=0, skipSsl=0, dryRun=0,
 	connectTimeout = 0, networkTimeout = 0, uploadThreads = 0;
 
 FilePattern *excludeFilePattern;
@@ -120,7 +120,7 @@ int parseCommandline(int argc, char *argv[]) {
 		{ "dryRun",            no_argument,        NULL,  0 },
 
 		{ "rebuild",           no_argument,        NULL,  0 },
-		{ "upload",            no_argument,        NULL,  0 },
+		{ "rebuildOnly",       no_argument,        NULL,  0 },
 
 		{ "version",           no_argument,        NULL,  'v' },
 		{ "help",              no_argument,        NULL,  'h' },
@@ -208,8 +208,9 @@ int parseCommandline(int argc, char *argv[]) {
 		} else if (strcmp(longName, "rebuild")==0) {
 			performRebuild=1;
 
-		} else if (strcmp(longName, "upload")==0) {
-			performUpload=1;
+		} else if (strcmp(longName, "rebuildOnly")==0) {
+			performRebuild=1;
+			performUpload=0;
 
 		} else if (strcmp(longName, "exclude")==0) {
 			if (!excludeFilePattern->add(optarg)) {
@@ -249,11 +250,6 @@ int parseCommandline(int argc, char *argv[]) {
 	if (!destination->isValid()) {
 		printf("Destination is invalid.\n");
 		delete destination;
-		failed = 1;
-	}
-
-	if (!performRebuild && !performUpload) {
-		printf("What shall I do? Say --rebuild and/or --upload!\n");
 		failed = 1;
 	}
 
