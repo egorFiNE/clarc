@@ -1,4 +1,4 @@
-CFLAGS_BASIC=-O0 -g -Wall -D_FILE_OFFSET_BITS=64  `xml2-config --cflags`  -DVERSION=\"test\" -I../src/ -Wno-deprecated-writable-strings  -ftrapv -pthread
+CFLAGS_BASIC=-O0 -g -Wall -D_FILE_OFFSET_BITS=64  `xml2-config --cflags`  -DVERSION=\"test\" -I../src/ -Wno-deprecated-writable-strings  -ftrapv -pthread -Wno-write-strings
 CXXFLAGS_BASIC=$(CFLAGS_BASIC)
 LDFLAGS_BASIC=`xml2-config --libs` -L/usr/local/lib -lcurl -lcheck /usr/local/lib/libre2.a
 
