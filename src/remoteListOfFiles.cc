@@ -388,6 +388,8 @@ int RemoteListOfFiles::performHeadOnFile(char *url, char *remotePath, uint32_t *
 		headUrl = amazonCredentials->generateUrl(escapedRemotePath, this->useSsl); 
 	}
 
+	free(escapedRemotePath);
+	
 	struct CurlResponse curlResponse;
 	CurlResponseInit(&curlResponse);
 
