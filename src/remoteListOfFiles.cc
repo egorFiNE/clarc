@@ -513,7 +513,7 @@ int RemoteListOfFiles::resolveMtimes() {
 		(this->mtimes)[i]=0;
 	}
 	
-	this->threads = new Threads(20);
+	this->threads = new Threads(50);
 
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
