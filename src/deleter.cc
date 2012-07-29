@@ -163,7 +163,7 @@ int Deleter::performPostOnBucket(char *xml, uint32_t *statusCode, char *errorRes
 }
 
 int Deleter::deleteBatch(char **batch, uint32_t batchCount, char *errorResult, uint32_t *statusCode) {
-	LOG(LOG_INFO, "[Delete] Deleting batch of %d objects", batchCount);
+	LOG(LOG_INFO, "[Delete] %sDeleting batch of %d objects", this->dryRun ? "[dry] " : "", batchCount);
 
 	uint32_t len = 0;
 	for (uint32_t i=0;i<batchCount;i++) {
@@ -202,7 +202,7 @@ int Deleter::deleteBatch(char **batch, uint32_t batchCount, char *errorResult, u
 	return res;
 }
 
-#define BATCH_SIZE 3
+#define BATCH_SIZE 999
 
 int Deleter::performDeletion() {
 	int failed=0;
@@ -237,7 +237,9 @@ int Deleter::performDeletion() {
 				failed=1;
 				break;
 			}
-			this->fileListStorage->storeDeletedBatch(batch, batchCount);
+			if (!this->dryRun) {
+				this->fileListStorage->storeDeletedBatch(batch, batchCount);
+			}
 			totalDeletedObjects+=batchCount;
 			batchCount=0;
 		}
@@ -259,12 +261,14 @@ int Deleter::performDeletion() {
 			failed=1;
 			return 0;
 		}
-		this->fileListStorage->storeDeletedBatch(batch, batchCount);
+		if (!this->dryRun) {
+			this->fileListStorage->storeDeletedBatch(batch, batchCount);
+		}
 		totalDeletedObjects+=batchCount;
 	}
 
 	if (totalDeletedObjects>0) {
-		LOG(LOG_INFO, "[Delete] Successfully deleted %d objects", totalDeletedObjects);
+		LOG(LOG_INFO, "[Delete] %sSuccessfully deleted %d objects", this->dryRun ? "[dry] " : "", totalDeletedObjects);
 	} else {
 		LOG(LOG_INFO, "[Delete] Nothing to delete", totalDeletedObjects);
 	}

@@ -16,6 +16,7 @@ Amazon AWS credentials:
 
 OPTIONS:
   --rebuild                 Rebuild local database from DEST.
+  --delete                  Delete absent files from S3.
   --rrs                     Use Reduced Redundancy Storage on S3.
   --public                  Make all files public. 
   --skipSsl                 Do not use SSL when connecting to S3. 

@@ -29,7 +29,7 @@ extern "C" {
 static char *accessKeyId=NULL, *secretAccessKey=NULL,
 	*databasePath=NULL, *databaseFilename= (char *)".files.sqlite3",
 	*source = NULL, *autoCreateBucketRegion = NULL;
-static int performRebuild=0, performUpload=1, makeAllPublic=0, useRrs=0, showProgress=0, skipSsl=0, dryRun=0,
+static int performRebuild=0, performUpload=1, performDelete=0, makeAllPublic=0, useRrs=0, showProgress=0, skipSsl=0, dryRun=0,
 	connectTimeout = 0, networkTimeout = 0, uploadThreads = 0, autoCreateBucket = 0;
 
 FilePattern *excludeFilePattern;
@@ -121,6 +121,7 @@ int parseCommandline(int argc, char *argv[]) {
 
 		{ "dryRun",            no_argument,        NULL,  0 },
 
+		{ "delete",            no_argument,        NULL,  0 },
 		{ "rebuild",           no_argument,        NULL,  0 },
 		{ "rebuildOnly",       no_argument,        NULL,  0 },
 
@@ -189,6 +190,9 @@ int parseCommandline(int argc, char *argv[]) {
 
 		} else if (strcmp(longName, "skipSsl")==0) {
 			skipSsl = 1;
+
+		} else if (strcmp(longName, "delete")==0) {
+			performDelete = 1;
 
 		} else if (strcmp(longName, "rrs")==0) {
 			useRrs = 1;
@@ -285,6 +289,11 @@ int parseCommandline(int argc, char *argv[]) {
 
 	if (!secretAccessKey) {
 		printf("Specify --secretAccessKey argument or S3_SECRETACCESSKEY environment variable\n"); 
+		failed = 1;
+	}
+
+	if (performDelete && !performUpload) {
+		printf("--delete cannot be specified with --rebuildOnly.\n");
 		failed = 1;
 	}
 
@@ -442,23 +451,25 @@ int main(int argc, char *argv[]) {
 
 		res = uploader->uploadFiles(fileListStorage, localFileList, source);
 		if (res==UPLOAD_SUCCESS) {
-			LocalFileList *filesToDelete = fileListStorage->calculateListOfFilesToDelete(localFileList);
-			
-			Deleter *deleter = new Deleter(amazonCredentials, filesToDelete, fileListStorage, databaseFilename);
-			deleter->dryRun = dryRun;
-			if (skipSsl) {
-				deleter->useSsl=0;
-			}
-			if (networkTimeout) {
-				deleter->networkTimeout = networkTimeout;
-			}
-			if (connectTimeout) {
-				deleter->connectTimeout = connectTimeout;
-			}
+			if (performDelete) {
+				LocalFileList *filesToDelete = fileListStorage->calculateListOfFilesToDelete(localFileList);
+				
+				Deleter *deleter = new Deleter(amazonCredentials, filesToDelete, fileListStorage, databaseFilename);
+				deleter->dryRun = dryRun;
+				if (skipSsl) {
+					deleter->useSsl=0;
+				}
+				if (networkTimeout) {
+					deleter->networkTimeout = networkTimeout;
+				}
+				if (connectTimeout) {
+					deleter->connectTimeout = connectTimeout;
+				}
 
-			res = deleter->performDeletion();
-			delete deleter;
-			delete filesToDelete;
+				res = deleter->performDeletion();
+				delete deleter;
+				delete filesToDelete;
+			}
 
 			if (!dryRun) {
 				res = uploader->uploadDatabase(databaseFilePath, databaseFilename);
