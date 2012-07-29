@@ -4,9 +4,11 @@
 
 void CurlResponseInit(struct CurlResponse *curlResponse) {
 	curlResponse->body = (char *) malloc(1);
+	curlResponse->body[0]=0;
 	curlResponse->bodySize = 0;
 
 	curlResponse->headers = (char *) malloc(1);
+	curlResponse->headers[0]=0;
 	curlResponse->headersSize = 0;
 }
 
