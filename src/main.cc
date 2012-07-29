@@ -373,26 +373,29 @@ int main(int argc, char *argv[]) {
 		remoteListOfFiles->connectTimeout = connectTimeout;
 	}
 
-	res = remoteListOfFiles->checkAuth();
-	if (res == AUTH_FAILED_BUCKET_DOESNT_EXISTS) {
-		if (autoCreateBucket) { 
-			res = remoteListOfFiles->createBucket(autoCreateBucketRegion);
-			if (res==CREATE_SUCCESS) {
-				LOG(LOG_INFO, "[BucketCreate] Created bucket %s in region %s", amazonCredentials->bucket, autoCreateBucketRegion);
+	if (dryRun) {
+		LOG(LOG_INFO, "[Auth] [dry] Success");
+	} else { 
+		res = remoteListOfFiles->checkAuth();
+		if (res == AUTH_FAILED_BUCKET_DOESNT_EXISTS) {
+			if (autoCreateBucket) { 
+				res = remoteListOfFiles->createBucket(autoCreateBucketRegion);
+				if (res==CREATE_SUCCESS) {
+					LOG(LOG_INFO, "[BucketCreate] Created bucket %s in region %s", amazonCredentials->bucket, autoCreateBucketRegion);
+				} else { 
+					exit(1);
+				}
 			} else { 
-				exit(1);
+				LOG(LOG_FATAL, "[Auth] Failed: bucket doesn't exists and no --create supplied");
+				exit(1);		
 			}
-		} else { 
-			LOG(LOG_FATAL, "[Auth] Failed: bucket doesn't exists and no --create supplied");
+
+		} else if (res == AUTH_FAILED) {
+			LOG(LOG_FATAL, "[Auth] FAIL, exit");
 			exit(1);		
 		}
-
-	} else if (res == AUTH_FAILED) {
-		LOG(LOG_FATAL, "[Auth] FAIL, exit");
-		exit(1);		
+		LOG(LOG_INFO, "[Auth] Success");
 	}
-	LOG(LOG_INFO, "[Auth] Success");
-
 	char *databaseFilePath = buildDatabaseFilePath(databaseFilename, databasePath);
 	LOG(LOG_DBG, "[Storage] Database path = %s", databaseFilePath);
 
