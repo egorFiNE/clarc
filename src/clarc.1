@@ -39,6 +39,9 @@ The same as --exclude but will read a list of exclude patterns from file instead
 \fB\-\-rebuild\fR
 Prior to uploading download files list and meta information from Amazon S3 and rebuild local database from scratch.
 .TP
+\fB\-\-delete\fR
+Delete files from S3 which have been deleted locally. This is performed after upload. This option cannot be specified with --rebuildOnly. 
+.TP
 \fB\-\-accessKeyId <string>
 .B (*) 
 Amazon S3 Access Key ID. You can also specify it in S3_ACCESSKEYID environment variable instead of the command line.
