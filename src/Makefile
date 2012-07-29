@@ -18,7 +18,8 @@ LDFLAGS=$(LDFLAGS_BASIC) -lz -lssl -lcrypto ../libsqlite3.a
 endif
 
 OBJS=localFileList.o fileListStorage.o upload.o base64.o help.o utils.o curlResponse.o amazonCredentials.o \
-	main.o remoteListOfFiles.o filePattern.o amzHeaders.o sha1.o hmac-sha1.o memxor.o logger.o threads.o destination.o
+	main.o remoteListOfFiles.o filePattern.o amzHeaders.o sha1.o hmac-sha1.o memxor.o logger.o threads.o \
+	destination.o deleter.o md5.o
 HEADERS=*.h
 
 prefix=/usr/local
