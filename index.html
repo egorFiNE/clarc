@@ -160,6 +160,9 @@
 	<dt>--rebuild</dt>
 	<dd>Prior to uploading download files list and meta information from Amazon S3 and rebuild local database from scratch.</dd>
 
+	<dt>--delete</dt>
+	<dd>Delete files from S3 which have been deleted locally. This is performed after upload. This option cannot be specified with <code>--rebuildOnly</code>.</dd>
+
 	<dt>--accessKeyId <span class="argument">&lt;string&gt;</span>, --secretAccessKey <span class="argument">&lt;string&gt;</span> <span class="mandatory">*</span></dt>
 	<dd>Amazon S3 Access Credentials. Get them <a href="https://portal.aws.amazon.com/gp/aws/securityCredentials">here</a>. You can also specify them in environment variables <code>S3_ACCESSKEYID</code> and <code>S3_SECRETACCESSKEY</code> instead of the command line.
 
