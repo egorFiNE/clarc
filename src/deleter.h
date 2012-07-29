@@ -17,11 +17,19 @@ class Deleter
 {
 private:
 	AmazonCredentials *amazonCredentials;
-	LocalFileList *localFileList;
+	LocalFileList *filesToDelete;
 	FileListStorage *fileListStorage;
+	char *databaseFilename;
+	int deleteBatch(char **batch, uint32_t batchCount, char *errorResult, uint32_t *statusCode);
+	int performPostOnBucket(char *xml, uint32_t *statusCode, char *errorResult);
 
 public:
-	Deleter(AmazonCredentials *amazonCredentials, LocalFileList *localFileList, FileListStorage *fileListStorage);
+	int dryRun;
+	int useSsl;
+	int connectTimeout;
+	int networkTimeout;
+
+	Deleter(AmazonCredentials *amazonCredentials, LocalFileList *filesToDelete, FileListStorage *fileListStorage, char *databaseFilename);
 	~Deleter();
 	int performDeletion();
 };

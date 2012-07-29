@@ -21,6 +21,7 @@ public:
 	char *generateUrl(char *remotePath, int useSsl);
 
 	char *generateUrlForBucketCreate(int useSsl);
+	char *generateUrlForObjectDelete(int useSsl);
 	static int isValidRegionForBucketCreate(char *region);
 
 	char *createAuthorizationHeader(char *stringToSign);

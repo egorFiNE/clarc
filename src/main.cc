@@ -439,13 +439,28 @@ int main(int argc, char *argv[]) {
 
 		res = uploader->uploadFiles(fileListStorage, localFileList, source);
 		if (res==UPLOAD_SUCCESS) {
-			// fileListStorage->calculateListOfFilesToDelete(localFileList);
+			LocalFileList *filesToDelete = fileListStorage->calculateListOfFilesToDelete(localFileList);
 			
-			// Deleter *deleter = new Deleter(amazonCredentials, localFileList, fileListStorage);
-			// res = deleter->performDeletion();
-			// delete deleter;
-			res = uploader->uploadDatabase(databaseFilePath, databaseFilename);
-			if (res==UPLOAD_SUCCESS) {
+			Deleter *deleter = new Deleter(amazonCredentials, filesToDelete, fileListStorage, databaseFilename);
+			deleter->dryRun = dryRun;
+			if (skipSsl) {
+				deleter->useSsl=0;
+			}
+			if (networkTimeout) {
+				deleter->networkTimeout = networkTimeout;
+			}
+			if (connectTimeout) {
+				deleter->connectTimeout = connectTimeout;
+			}
+
+			res = deleter->performDeletion();
+			delete deleter;
+			delete filesToDelete;
+
+			if (!dryRun) {
+				res = uploader->uploadDatabase(databaseFilePath, databaseFilename);
+				if (res==UPLOAD_SUCCESS) {
+				}
 			}
 		}
 

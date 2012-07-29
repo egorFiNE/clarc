@@ -198,7 +198,7 @@ int FileListStorage::storeRemoteListOfFiles(RemoteListOfFiles *remoteListOfFiles
 }
 
 
-int FileListStorage::calculateListOfFilesToDelete(LocalFileList *localFileList) {
+LocalFileList * FileListStorage::calculateListOfFilesToDelete(LocalFileList *localFileList) {
 	char *sErrMsg = 0;
 	sqlite3_stmt *stmt = NULL;
 	const char *tail = 0;
@@ -206,24 +206,26 @@ int FileListStorage::calculateListOfFilesToDelete(LocalFileList *localFileList) 
 	char createTable[10240] = "CREATE TEMPORARY TABLE localFiles (" \
 		"filePath TEXT NOT NULL PRIMARY KEY)";
 	if (sqlite3_exec(this->sqlite, createTable, NULL, NULL, &sErrMsg) != SQLITE_OK) {
-		return STORAGE_FAILED;
+		return NULL;
 	}
 
 	if (sqlite3_exec(this->sqlite, "BEGIN TRANSACTION", NULL, NULL, &sErrMsg) != SQLITE_OK) {
-		return STORAGE_FAILED;
+		return NULL;
 	}
 
 	if (sqlite3_prepare_v2(this->sqlite, "INSERT INTO localFiles (filePath) VALUES (?)", 10240, &stmt, &tail) != SQLITE_OK) {
-		return STORAGE_FAILED;
+		return NULL;
 	}
 
 	for (uint32_t i=0;i<localFileList->count;i++) {
 		if (sqlite3_bind_text(stmt, 1, (localFileList->paths[i]+1), -1, SQLITE_TRANSIENT) != SQLITE_OK) {
-			return STORAGE_FAILED;
+			sqlite3_finalize(stmt);
+			return NULL;
 		}
 
 		if (sqlite3_step(stmt) != SQLITE_DONE) {
-			return STORAGE_FAILED;
+			sqlite3_finalize(stmt);
+			return NULL;
 		}
 
 		sqlite3_clear_bindings(stmt);
@@ -238,22 +240,64 @@ int FileListStorage::calculateListOfFilesToDelete(LocalFileList *localFileList) 
 
 	sqlite3_stmt *selectFileStmt=NULL;
 	
-	if (sqlite3_prepare(this->sqlite, "SELECT filePath FROM files WHERE files.filePath NOT IN (SELECT filePath FROM localFiles)", -1, &selectFileStmt, 0) != SQLITE_OK) {
-		return STORAGE_FAILED;
+	if (sqlite3_prepare(this->sqlite, "SELECT filePath FROM files WHERE files.filePath NOT IN " \
+		"(SELECT filePath FROM localFiles)", -1, &selectFileStmt, 0) != SQLITE_OK) {
+		return NULL;
 	} 
 	
+	LocalFileList *fileList = new LocalFileList(NULL);
 	int s;
 	do {
 		s = sqlite3_step(selectFileStmt);
 		if (s == SQLITE_ROW) {
 			char *filePath = (char *)sqlite3_column_text(selectFileStmt, 0);
-			// FIXME here.
+			fileList->add(filePath, 0);
 		} else {
 			break;
 		}
 	} while (true);
 
 	sqlite3_finalize(selectFileStmt);
+
+	sqlite3_exec(this->sqlite, (char *) "DROP TABLE localFiles", NULL, NULL, &sErrMsg);
+
+	return fileList;
+}
+
+int FileListStorage::storeDeletedBatch(char **batch, uint32_t batchCount) {
+	char *sErrMsg = 0;
+	sqlite3_stmt *stmt = NULL;
+	const char *tail = 0;
+
+	if (sqlite3_exec(this->sqlite, "BEGIN TRANSACTION", NULL, NULL, &sErrMsg) != SQLITE_OK) {
+		return STORAGE_FAILED;
+	}
+
+	if (sqlite3_prepare_v2(this->sqlite, "DELETE FROM files WHERE filePath=?", 10240, &stmt, &tail) != SQLITE_OK) {
+		return STORAGE_FAILED;
+	}
+
+	for (uint32_t i=0;i<batchCount;i++) {
+		if (sqlite3_bind_text(stmt, 1, batch[i], -1, SQLITE_TRANSIENT) != SQLITE_OK) {
+			sqlite3_finalize(stmt);
+			return STORAGE_FAILED;
+		}
+
+		if (sqlite3_step(stmt) != SQLITE_DONE) {
+			sqlite3_clear_bindings(stmt);
+			sqlite3_finalize(stmt);
+			return STORAGE_FAILED;
+		}
+
+		sqlite3_clear_bindings(stmt);
+		sqlite3_reset(stmt);
+	}
+
+	sqlite3_finalize(stmt);
+
+	if (sqlite3_exec(this->sqlite, "END TRANSACTION", NULL, NULL, &sErrMsg) != SQLITE_OK) {
+		return STORAGE_FAILED;
+	}
 
 	return STORAGE_SUCCESS;
 }

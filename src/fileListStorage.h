@@ -26,8 +26,8 @@ public:
 	int store(char *remotePath, char *md5, uint64_t mtime);
 	int storeRemoteListOfFiles(RemoteListOfFiles *remoteListOfFiles);
 	int truncate();
-	int calculateListOfFilesToDelete(LocalFileList *localFileList);
-
+	LocalFileList * calculateListOfFilesToDelete(LocalFileList *localFileList);
+	int storeDeletedBatch(char **batch, uint32_t batchCount);
 };
 
 #endif

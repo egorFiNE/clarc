@@ -41,6 +41,12 @@ int AmazonCredentials::isValidRegionForBucketCreate(char *region) {
 	);
 }
 
+char *AmazonCredentials::generateUrlForObjectDelete(int useSsl) {
+	char *resultUrl;
+	asprintf(&resultUrl, "%s://%s.s3.amazonaws.com/?delete", useSsl?"https":"http", this->bucket);
+	return resultUrl;
+}
+
 char *AmazonCredentials::generateUrlForBucketCreate(int useSsl) {
 	char *resultUrl;
 	asprintf(&resultUrl, "%s://%s.s3.amazonaws.com/", useSsl?"https":"http", this->bucket);
