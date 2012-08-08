@@ -77,7 +77,7 @@
       <span class="paramSource">/home/egor/Music/</span>  <span class="paramDest">s3://music.egorfine.com/</span></code></pre>
 
 <p>
-	This will upload all local files from <span class="paramSource">/home/egor/Music</span> to Amazon S3 bucket <span class="paramDest">music.egorfine.com</span>. <b>clarc</b> will create a database file <span style="white-space: nowrap"><span class="paramSource">/home/egor/Music</span>/.files.sqlite3</span>. 
+	This will upload all local files from <span class="paramSource">/home/egor/Music</span> to Amazon S3 bucket <span class="paramDest">music.egorfine.com</span>. <b>clarc</b> will create a database file <span style="white-space: nowrap"><span class="paramSource">/home/egor/Music</span>/.clarc.sqlite3</span>. 
 </p>
 
 <p>Subsequent invocations of the same command line will scan <span class="paramSource">/home/egor/Music</span> and compare the file system metadata with the one stored in database. Only changes will be uploaded to S3.
@@ -98,7 +98,7 @@
 <h3>Local meta database</h3>
 
 <p>
-	<b>clarc</b> uses local sqlite database to store files metadata. On subsequent invocations with the same path <b>clarc</b> will compare actual filesystem state with the database previously stored and only upload changed files. Database is stored in the same source folder in file named <code>.files.sqlite3</code>.
+	<b>clarc</b> uses local sqlite database to store files metadata. On subsequent invocations with the same path <b>clarc</b> will compare actual filesystem state with the database previously stored and only upload changed files. Database is stored in the same source folder in file named <code>.clarc.sqlite3</code>.
 </p>
 
 
@@ -209,7 +209,7 @@
 		By default it's the source folder. <b>Note:</b> this argument MUST NOT specify file name.</dd>
 
 	<dt>--dbFilename <span class="argument">&lt;file name&gt;</span></dt>
-	<dd>File name for the database. By default it's <code>.files.sqlite3</code>.
+	<dd>File name for the database. By default it's <code>.clarc.sqlite3</code>.
 </dl>
 
 <h3>Network options</h3>
