@@ -11,7 +11,7 @@
 
 #define UPLOAD_THREADS 4
 
-#define THREAD_STACK_SIZE 1*1024*1024
+#define THREAD_STACK_SIZE 1024*512
 
 // I need to use curl error reporting for internal failures of upload functions
 #define UPLOAD_FILE_FUNCTION_FAILED CURLE_OBSOLETE44
