@@ -108,7 +108,7 @@ START_TEST(RemoteListOfFiles_parseFirstXML) {
 	fail_unless(strcmp(errorResult, "")==0);
 
 	fail_unless(remoteListOfFiles->count==1000);
-	fail_unless(strcmp(remoteListOfFiles->paths[0], ".files.sqlite3")==0);
+	fail_unless(strcmp(remoteListOfFiles->paths[0], ".clarc.sqlite3")==0);
 	fail_unless(strcmp(remoteListOfFiles->md5s[0], "2538c9b8ac602d3fb92772d62fdcaa54")==0);
 	fail_unless(strcmp(remoteListOfFiles->paths[999], "_usr_bin_tfmtodit")==0);
 	fail_unless(strcmp(remoteListOfFiles->md5s[999], "d9cca721a735dac4efe709e0f3518373")==0);
@@ -142,7 +142,7 @@ START_TEST(RemoteListOfFiles_parseSecondXML) {
 	fail_unless(strcmp(errorResult, "")==0);
 
 	fail_unless(remoteListOfFiles->count==1430);
-	fail_unless(strcmp(remoteListOfFiles->paths[0], ".files.sqlite3")==0);
+	fail_unless(strcmp(remoteListOfFiles->paths[0], ".clarc.sqlite3")==0);
 	fail_unless(strcmp(remoteListOfFiles->md5s[0], "2538c9b8ac602d3fb92772d62fdcaa54")==0);
 	fail_unless(strcmp(remoteListOfFiles->paths[1429], "wireless-regdb-2011.04.28.tar.bz9")==0);
 	fail_unless(strcmp(remoteListOfFiles->md5s[1429], "16b7fabd4d7761ccf206702a3f18cce9")==0);

@@ -27,7 +27,7 @@ extern "C" {
 #include "deleter.h"
 
 static char *accessKeyId=NULL, *secretAccessKey=NULL,
-	*databasePath=NULL, *databaseFilename= (char *)".files.sqlite3",
+	*databasePath=NULL, *databaseFilename= (char *)".clarc.sqlite3",
 	*source = NULL, *autoCreateBucketRegion = NULL;
 static int performRebuild=0, performUpload=1, performDelete=0, makeAllPublic=0, useRrs=0, showProgress=0, skipSsl=0, dryRun=0,
 	connectTimeout = 0, networkTimeout = 0, uploadThreads = 0, autoCreateBucket = 0;
