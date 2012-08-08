@@ -52,6 +52,7 @@ private:
 	static void extractMD5FromETagHeaders(char *headers, char *md5);
 	static char *createRealLocalPath(char *prefix, char *path);
 	static void addUidAndGidHeaders(uid_t uid, gid_t gid, AmzHeaders *amzHeaders);
+	void logDebugMtime(char *path, uint32_t mtimeDb, uint32_t mtimeFs);
 
 public:
 	Threads *threads;

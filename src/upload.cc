@@ -484,6 +484,30 @@ char *Uploader::createRealLocalPath(char *prefix, char *path) {
 	return realLocalPath;
 }
 
+void Uploader::logDebugMtime(char *path, uint32_t mtimeDb, uint32_t mtimeFs) {
+	if (mtimeDb==0) {
+		LOG(LOG_DBG, "[Upload] %s: no stored mtime, uploading", path);
+	} else { 
+		struct tm *timeinfo;
+		time_t m;
+		m = (time_t) mtimeDb;
+		timeinfo = gmtime(&m);
+		char *mtimeDbHr = (char *)malloc(128);
+		mtimeDbHr[0]=0;
+		strftime(mtimeDbHr, 128, "%F %T", timeinfo);
+
+		m = (time_t) mtimeFs;
+		timeinfo = gmtime(&m);
+		char *mtimeFsHr = (char *)malloc(128);
+		mtimeFsHr[0]=0;
+		strftime(mtimeFsHr, 128, "%F %T", timeinfo);
+		LOG(LOG_DBG, "[Upload] %s: stored mtime=%d (%s), filesystem mtime=%d (%s), uploading", 
+			path,
+			mtimeDb, mtimeDbHr, mtimeFs, mtimeFsHr
+		);
+	}
+}
+
 int Uploader::uploadFiles(FileListStorage *fileListStorage, LocalFileList *files, char *prefix) {
 	this->totalSize = files->calculateTotalSize();
 	char *hrSizeString = hrSize(this->totalSize);
@@ -544,27 +568,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, LocalFileList *files
 			free(realLocalPath);
 			continue;
 		} else { 
-			if (mtime==0) {
-				LOG(LOG_DBG, "[Upload] %s: no stored mtime, uploading", path);
-			} else { 
-				struct tm *timeinfo;
-				time_t m;
-				m = (time_t) mtime;
-				timeinfo = gmtime(&m);
-				char *mTimeHr = (char *)malloc(128);
-				mTimeHr[0]=0;
-				strftime(mTimeHr, 128, "%F %T", timeinfo);
-
-				m = (time_t) fileInfo->st_mtime;
-				timeinfo = gmtime(&m);
-				char *fsMTimeHr = (char *)malloc(128);
-				fsMTimeHr[0]=0;
-				strftime(fsMTimeHr, 128, "%F %T", timeinfo);
-				LOG(LOG_DBG, "[Upload] %s: stored mtime=%d (%s), filesystem mtime=%d (%s), uploading", 
-					path,
-					mtime, mTimeHr, fileInfo->st_mtime, fsMTimeHr
-				);
-			}
+			this->logDebugMtime(path, mtime, fileInfo->st_mtime);
 		}
 
 		if (this->dryRun) {
