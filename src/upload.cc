@@ -12,6 +12,7 @@ using namespace std;
 #include <curl/curl.h>
 #include <errno.h>
 #include <sqlite3.h>
+#include <time.h>	
 
 extern "C" {
 #include "utils.h"
@@ -542,6 +543,28 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, LocalFileList *files
 			free(fileInfo);
 			free(realLocalPath);
 			continue;
+		} else { 
+			if (mtime==0) {
+				LOG(LOG_DBG, "[Upload] %s: no stored mtime, uploading", path);
+			} else { 
+				struct tm *timeinfo;
+				time_t m;
+				m = (time_t) mtime;
+				timeinfo = gmtime(&m);
+				char *mTimeHr = (char *)malloc(128);
+				mTimeHr[0]=0;
+				strftime(mTimeHr, 128, "%F %T", timeinfo);
+
+				m = (time_t) fileInfo->st_mtime;
+				timeinfo = gmtime(&m);
+				char *fsMTimeHr = (char *)malloc(128);
+				fsMTimeHr[0]=0;
+				strftime(fsMTimeHr, 128, "%F %T", timeinfo);
+				LOG(LOG_DBG, "[Upload] %s: stored mtime=%d (%s), filesystem mtime=%d (%s), uploading", 
+					path,
+					mtime, mTimeHr, fileInfo->st_mtime, fsMTimeHr
+				);
+			}
 		}
 
 		if (this->dryRun) {
