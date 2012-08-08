@@ -154,7 +154,8 @@ CURLcode Uploader::uploadFile(
 
 	int isSoftLink = (fileInfo->st_mode & S_IFLNK)==S_IFLNK ? 1 : 0;
 
-	FILE *fin;
+	FILE *fin = NULL;
+
 	if (!isSoftLink) {
 		fin = fopen(localPath, "rb");
 		if (!fin) {
