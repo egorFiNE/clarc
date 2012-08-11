@@ -27,6 +27,7 @@ START_TEST(MicroCurl_mainTest) {
 	char *date = getIsoDate(); 
 
 	microCurl->addHeader("Date", date);
+	microCurl->prepare();
 	CURLcode res = microCurl->go();
 	fail_unless(res==CURLE_OK);
 	fail_unless(microCurl->httpStatusCode==200);

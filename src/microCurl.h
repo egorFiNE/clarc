@@ -6,7 +6,6 @@
 #include <algorithm>
 using namespace std;
 
-#include "amzHeaders.h"
 #include <curl/curl.h>
 
 #define METHOD_GET  1
@@ -36,7 +35,15 @@ public:
 	int maxConnects;
 	int lowSpeedLimit;
 
+	char *postData;
+	uint32_t postSize;
+
+	FILE *fileIn;
+	uint64_t fileSize;
+
+	char *curlErrors;
 	int httpStatusCode;
+
 	char *body;
 	uint32_t bodySize;
 
@@ -44,9 +51,14 @@ public:
 	~MicroCurl();
 
 	void addHeader(char *name, char *format, ...);
+	char *serializeAmzHeadersIntoStringToSign();
+
+	CURL *prepare();
 	CURLcode go();
+
 	char *getHeader(char *name);
 	char *escapePath(char *path);
+
 };
 
 #endif

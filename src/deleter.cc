@@ -14,14 +14,13 @@ using namespace std;
 extern "C" {
 #include "utils.h"
 #include "base64.h"
-#include "curlResponse.h"
 #include "logger.h"
 #include "md5.h"
 #include "base64.h"
 }
 
 #include "deleter.h"
-#include "amzHeaders.h"
+#include "microCurl.h"
 #include "settings.h"
 
 Deleter::Deleter(
@@ -47,17 +46,19 @@ Deleter::~Deleter() {
 	this->databaseFilename = NULL;
 }
 
-size_t readFunctionForObjectDelete(void *ptr, size_t size, size_t nmemb, void *userdata)  {
-	strcpy((char *)ptr, (char*) userdata);
-	return strlen((char*)userdata);
-}
+
+// size_t readFunctionForObjectDelete(void *ptr, size_t size, size_t nmemb, void *userdata)  {
+// 	strcpy((char *)ptr, (char*) userdata);
+// 	return strlen((char*)userdata);
+// }
 
 int Deleter::performPostOnBucket(char *xml, uint32_t *statusCode, char *errorResult) {
-	char method[5]="POST";
+	MicroCurl *microCurl = new MicroCurl();
+	microCurl->method=METHOD_POST;
 
 	char *date = getIsoDate(); 
 
-	CURL *curl = curl_easy_init();
+	//CURL *curl = curl_easy_init();
 
 	char *canonicalizedResource;
 	asprintf(&canonicalizedResource, "/%s/", this->amazonCredentials->bucket);
@@ -72,7 +73,7 @@ int Deleter::performPostOnBucket(char *xml, uint32_t *statusCode, char *errorRes
 	base64_encode((char *)digest, 16, (char*) base64Md5, 64);
 
 	char *stringToSign;
-	asprintf(&stringToSign, "%s\n%s\n%s\n%s\n%s?delete", method, base64Md5, "", date, canonicalizedResource); 
+	asprintf(&stringToSign, "POST\n%s\n%s\n%s\n%s?delete", base64Md5, "", date, canonicalizedResource); 
 	free(canonicalizedResource);
 
 	char *authorization = this->amazonCredentials->createAuthorizationHeader(stringToSign); 
@@ -80,84 +81,49 @@ int Deleter::performPostOnBucket(char *xml, uint32_t *statusCode, char *errorRes
 
 	if (authorization == NULL) {
 		free(date);
-		curl_easy_cleanup(curl);		
+		delete microCurl;
 		strcpy(errorResult, "Error in auth module");
 		return 0;
 	}
 
 	char *postUrl = this->amazonCredentials->generateUrlForObjectDelete(this->useSsl);
-
-	struct CurlResponse curlResponse;
-	CurlResponseInit(&curlResponse);
-
-	curl_easy_setopt(curl, CURLOPT_POST, 1L);
-	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, NULL);
-
-	curl_easy_setopt(curl, CURLOPT_READDATA, xml);
-	curl_easy_setopt(curl, CURLOPT_READFUNCTION, &readFunctionForObjectDelete);
-	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strlen(xml));
-
-	curl_easy_setopt(curl, CURLOPT_URL, postUrl);
+	microCurl->url = strdup(postUrl);
 	LOG(LOG_DBG, "[Delete] POST %s", postUrl);
 	free(postUrl);
 
-	struct curl_slist *slist = NULL;
+	microCurl->postData = strdup(xml);
+	microCurl->postSize = strlen(xml);
 
-	slist = AmzHeaders::addHeader(slist, "Date", date);
+	microCurl->addHeader("Date", date);
 	free(date);
 
-	slist = AmzHeaders::addHeader(slist, "Authorization", authorization);
+	microCurl->addHeader("Authorization", authorization);
 	free(authorization);
 
-	slist = curl_slist_append(slist, "Expect:");
-	slist = curl_slist_append(slist, "Content-Type:");
+	microCurl->addHeader("Expect", "");
+	microCurl->addHeader("Content-Type", "");
 
-	slist = AmzHeaders::addHeader(slist, "Content-MD5", (char *) base64Md5);
+	microCurl->addHeader("Content-MD5", (char *) base64Md5);
 
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
-	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+	microCurl->connectTimeout = this->connectTimeout;
+	microCurl->maxConnects = MAXCONNECTS;
+	microCurl->networkTimeout = this->networkTimeout;
+	microCurl->lowSpeedLimit = LOW_SPEED_LIMIT;
 
-	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, this->connectTimeout);
-	curl_easy_setopt(curl, CURLOPT_MAXCONNECTS, MAXCONNECTS);
-	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->networkTimeout);
-	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, LOW_SPEED_LIMIT);
+	microCurl->prepare();
+	CURLcode res = microCurl->go();
 
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&curlResponse);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlResponseBodyCallback);
+	*statusCode = microCurl->httpStatusCode;
 
-	curl_easy_setopt(curl, CURLOPT_WRITEHEADER, (void *)&curlResponse); 
-	curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, &CurlResponseHeadersCallback);
-
-	CURLcode res = curl_easy_perform(curl);
-
-	curl_slist_free_all(slist);
-
-	*statusCode = 0;
-
-	if (res==CURLE_OK) {
-		long httpStatus = 0;
-		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpStatus);
-		*statusCode = (uint32_t) httpStatus;
-
-		curl_easy_cleanup(curl);
-		CurlResponseFree(&curlResponse);
+	// now we are dealing with a weird curl or amazon bug. Sometimes we get CURLE_SEND_ERROR, 
+	// but the request has been performed.
+	if (res==CURLE_OK || microCurl->httpStatusCode==200) {
+		delete microCurl;
 		return 1;
 
 	} else { 
-		// now we are dealing with a weird curl or amazon bug. Sometimes we get CURLE_SEND_ERROR, 
-		// but the request has been performed.
-		if (strlen(curlResponse.headers)>1) {
-			if (strstr(curlResponse.headers, "HTTP/1.1 200 OK")==curlResponse.headers) {
-				curl_easy_cleanup(curl);
-				CurlResponseFree(&curlResponse);
-				*statusCode=200;
-				return 1;
-			}
-		}
-
 		strcpy(errorResult, "Error performing request");
-		curl_easy_cleanup(curl);
-		CurlResponseFree(&curlResponse);
+		delete microCurl;
 		return 0;
 	}
 }

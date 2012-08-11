@@ -17,7 +17,6 @@ using namespace std;
 extern "C" {
 #include "utils.h"
 #include "base64.h"
-#include "curlResponse.h"
 #include <pwd.h>
 #include <grp.h>
 #include "logger.h"
@@ -34,8 +33,6 @@ unsigned int sleep(unsigned int seconds);
 #include "upload.h"
 #include "settings.h"
 #include "amazonCredentials.h"
-#include "amzHeaders.h"
-
 
 pthread_mutex_t uidMutex;
 
@@ -96,28 +93,19 @@ Uploader::~Uploader() {
 	pthread_mutex_destroy(&uidMutex);
 }
 
-
-void Uploader::extractMD5FromETagHeaders(char *headers, char *md5) {
+void Uploader::extractMD5FromETagHeaders(char *md5HeaderValue, char *md5) {
 	*md5=0;
-	if (!headers) {
-		return;
+	if (md5HeaderValue==NULL || strlen(md5HeaderValue)!=34) {
+		return; 
 	}
 
-	if (strlen(headers)<7+32) {
-		return;
-	}
-
-	char *etag = strstr(headers, "ETag: ");
-	if (etag) {
-		char *pos = (etag+6);
-		if (strlen(pos)>=34 && *pos==0x22 && *(pos+33)==0x22) { // double quotes
-			strncpy(md5, (pos+1), 32);
-			*(md5+32)=0;
-		}
+	if (*md5HeaderValue==0x22 && *(md5HeaderValue+33)==0x22) { // double quotes
+		strncpy(md5, (md5HeaderValue+1), 32);
+		*(md5+32)=0;
 	}
 }
 
-void Uploader::addUidAndGidHeaders(uid_t uid, gid_t gid, AmzHeaders *amzHeaders) {
+void Uploader::addUidAndGidHeaders(uid_t uid, gid_t gid, MicroCurl *microCurl) {
 	pthread_mutex_lock(&uidMutex);
 	struct passwd *uidS = getpwuid(uid);
 	struct group *gidS = getgrgid(gid);
@@ -129,16 +117,11 @@ void Uploader::addUidAndGidHeaders(uid_t uid, gid_t gid, AmzHeaders *amzHeaders)
 
 	pthread_mutex_unlock(&uidMutex);
 
-	amzHeaders->add((char *) "x-amz-meta-uid", uidHeader);
-	amzHeaders->add((char *) "x-amz-meta-gid", gidHeader);
+	microCurl->addHeader("x-amz-meta-uid", uidHeader);
+	microCurl->addHeader("x-amz-meta-gid", gidHeader);
+
 	free(gidHeader);
 	free(uidHeader);	
-}
-
-
-size_t readFunctionForSoftlinkUpload(void *ptr, size_t size, size_t nmemb, void *userdata)  {
-	strcpy((char *)ptr, (char*) userdata);
-	return strlen((char*)userdata);
 }
 
 CURLcode Uploader::uploadFile(
@@ -151,8 +134,6 @@ CURLcode Uploader::uploadFile(
 	char *md5,
 	char *errorResult
 ) {
-	char method[4] = "PUT";
-
 	int isSoftLink = (fileInfo->st_mode & S_IFLNK)==S_IFLNK ? 1 : 0;
 
 	FILE *fin = NULL;
@@ -165,23 +146,23 @@ CURLcode Uploader::uploadFile(
 		}
 	}
 
+	MicroCurl *microCurl = new MicroCurl();
+	microCurl->method = METHOD_PUT;
+
 	char *date = getIsoDate();
 
-	CURL *curl = curl_easy_init();
-	char *escapedRemotePath=curl_easy_escape(curl, remotePath, 0);
+	char *escapedRemotePath = microCurl->escapePath(remotePath);
 
-	AmzHeaders *amzHeaders = new AmzHeaders();
+	Uploader::addUidAndGidHeaders(fileInfo->st_uid, fileInfo->st_gid, microCurl);
 
-	Uploader::addUidAndGidHeaders(fileInfo->st_uid, fileInfo->st_gid, amzHeaders);
-
-	amzHeaders->add((char *) "x-amz-acl", this->makeAllPublic ? (char *) "public-read" : (char *) "private");
+	microCurl->addHeader((char *) "x-amz-acl", this->makeAllPublic ? (char *) "public-read" : (char *) "private");
 
 	if (this->useRrs) {
-		amzHeaders->add((char *) "x-amz-storage-class",(char *) "REDUCED_REDUNDANCY");
+		microCurl->addHeader((char *) "x-amz-storage-class",(char *) "REDUCED_REDUNDANCY");
 	}
 
-	amzHeaders->add((char *) "x-amz-meta-mode", (char *) "%o", fileInfo->st_mode);
-	amzHeaders->add((char *) "x-amz-meta-mtime", (char *) "%llu", (uint64_t) fileInfo->st_mtime);
+	microCurl->addHeader((char *) "x-amz-meta-mode", (char *) "%o", fileInfo->st_mode);
+	microCurl->addHeader((char *) "x-amz-meta-mtime", (char *) "%llu", (uint64_t) fileInfo->st_mtime);
 
 	char *softLinkData = NULL;
 	if (isSoftLink) {
@@ -192,18 +173,18 @@ CURLcode Uploader::uploadFile(
 			linkLength = readlink(localPath, softLinkData, 1024*100); // eat this
 		}
 		softLinkData[linkLength]=0;
-		amzHeaders->add((char *) "x-amz-meta-symlink", softLinkData);
-		amzHeaders->add((char *) "x-amz-meta-localpath", localPath);
+		microCurl->addHeader((char *) "x-amz-meta-symlink", softLinkData);
+		microCurl->addHeader((char *) "x-amz-meta-localpath", localPath);
 	} 
 
-	char *amzHeadersToSign = amzHeaders->serializeIntoStringToSign();
+	char *amzHeadersToSign = microCurl->serializeAmzHeadersIntoStringToSign();
 
 	char *canonicalizedResource;
 	asprintf(&canonicalizedResource, "/%s/%s", amazonCredentials->bucket, escapedRemotePath);
 
 	 // 1k is enough to hold other headers	
 	char *stringToSign = (char *)malloc(strlen(canonicalizedResource) + strlen(amzHeadersToSign) + 1024);
-	sprintf(stringToSign, "%s\n%s\n%s\n%s\n", method, "", contentType, date);
+	sprintf(stringToSign, "PUT\n%s\n%s\n%s\n", "", contentType, date);
 	strcat(stringToSign, amzHeadersToSign);
 	strcat(stringToSign, canonicalizedResource);
 
@@ -214,8 +195,8 @@ CURLcode Uploader::uploadFile(
 	free(canonicalizedResource);
 
 	if (authorization==NULL) {
+		delete microCurl;
 		free(date);
-		curl_easy_cleanup(curl);
 		free(escapedRemotePath);
 		strcpy(errorResult, "Error in auth");
 		return UPLOAD_FILE_FUNCTION_FAILED;
@@ -229,65 +210,43 @@ CURLcode Uploader::uploadFile(
 	}
 	free(escapedRemotePath);
 
-	struct CurlResponse curlResponse;
-	CurlResponseInit(&curlResponse);
-
-	curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
-
-	curl_easy_setopt(curl, CURLOPT_URL, postUrl);
+	microCurl->url = strdup(postUrl);
 	free(postUrl);
 
 	if (isSoftLink) {
-		curl_easy_setopt(curl, CURLOPT_INFILESIZE, strlen(softLinkData));	
-		curl_easy_setopt(curl, CURLOPT_READDATA, softLinkData);
-		curl_easy_setopt(curl, CURLOPT_READFUNCTION, &readFunctionForSoftlinkUpload);
+		microCurl->postData = strdup(softLinkData);
+		microCurl->postSize = strlen(softLinkData);
 	} else { 
-		curl_easy_setopt(curl, CURLOPT_READDATA, fin);
-		curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t) fileInfo->st_size);
+		microCurl->fileIn = fin;
+		microCurl->fileSize = fileInfo->st_size;
 	}
 
-	struct curl_slist *slist = NULL;
-
-	slist = AmzHeaders::addHeader(slist, "Date", date);
+	microCurl->addHeader("Date", date);
 	free(date);
 
-	slist = AmzHeaders::addHeader(slist, "Authorization", authorization);
+	microCurl->addHeader("Authorization", authorization);
 	free(authorization);
 
-	slist = AmzHeaders::addHeader(slist, "Content-type", contentType);
+	microCurl->addHeader("Content-type", contentType);
+	microCurl->addHeader("Expect", "");
 
-	slist = curl_slist_append(slist, "Expect:");
-
-	slist = amzHeaders->serializeIntoCurl(slist);
-	delete amzHeaders;
-
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
-	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
-
-	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, this->connectTimeout);
-	curl_easy_setopt(curl, CURLOPT_MAXCONNECTS, MAXCONNECTS);
-	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->networkTimeout);
-	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, LOW_SPEED_LIMIT);
-
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&curlResponse);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlResponseBodyCallback);
-
-	curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, &CurlResponseHeadersCallback);
-	curl_easy_setopt(curl, CURLOPT_WRITEHEADER, (void *)&curlResponse); 
+	microCurl->connectTimeout = this->connectTimeout;
+	microCurl->maxConnects = MAXCONNECTS;
+	microCurl->networkTimeout = this->networkTimeout;
+	microCurl->lowSpeedLimit = LOW_SPEED_LIMIT;
 
 	struct UploadProgress *uploadProgress = (struct UploadProgress *)malloc(sizeof(struct UploadProgress));
 	uploadProgress->path = remotePath;
 	uploadProgress->ullast = 0;
 	uploadProgress->uploader = this;
+
+	CURL *curl = microCurl->prepare();
 	curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, &progressFunction);
 	curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, (void *) uploadProgress);
 	curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0);
 
-	char *curlErrors = (char *) malloc(CURL_ERROR_SIZE);
-	curlErrors[0]=0;
-	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, curlErrors);
-
-	CURLcode res = curl_easy_perform(curl);
+	microCurl->prepare();
+	CURLcode res = microCurl->go();
 
 	if (isSoftLink) {
 		free(softLinkData);
@@ -295,37 +254,33 @@ CURLcode Uploader::uploadFile(
 		fclose(fin); 
 	}
 
-	curl_slist_free_all(slist);
 	free(uploadProgress);
 
 	*md5=0;
-	*httpStatusCode = 0;
+	*httpStatusCode = microCurl->httpStatusCode;
 
 	if (res==CURLE_OK) {
 		this->progress(remotePath, 0, (double) fileInfo->st_size, (double) fileInfo->st_size);
 
-		long _httpStatus = 0;
-		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &_httpStatus);
-		*httpStatusCode = (uint32_t) _httpStatus;
+		if (microCurl->httpStatusCode==307) {
+			char *location = microCurl->getHeader("location");
+			strcpy(errorResult, location);
+			free(location);
 
-		if (_httpStatus==307) {
-			extractLocationFromHeaders(curlResponse.headers, errorResult);
-		} else if (_httpStatus==200) { 
-			Uploader::extractMD5FromETagHeaders(curlResponse.headers, md5);
+		} else if (microCurl->httpStatusCode==200) { 
+			char *etag = microCurl->getHeader("etag");
+			Uploader::extractMD5FromETagHeaders(etag, md5); 
+			free(etag);
 		}
 
-		curl_easy_cleanup(curl);
-		free(curlErrors);
-		CurlResponseFree(&curlResponse);
+		delete microCurl;
 
 		return CURLE_OK;
 
 	} else { 
-		strcpy(errorResult, curlErrors);
+		strcpy(errorResult, microCurl->curlErrors);
 
-		curl_easy_cleanup(curl);
-		free(curlErrors);
-		CurlResponseFree(&curlResponse);
+		delete microCurl;
 
 		return res;
 	}

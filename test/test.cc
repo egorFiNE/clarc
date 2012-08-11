@@ -25,7 +25,6 @@ int main(int argc, char *argv[]) {
 	int number_failed;
 	SRunner *sr = srunner_create(LocalFileListSuite());
 	srunner_add_suite(sr, AmazonCredentialsSuite());
-	srunner_add_suite(sr, AmzHeadersSuite());
 	srunner_add_suite(sr, FileListStorageSuite());
 	srunner_add_suite(sr, RemoteListOfFilesSuite());
 	srunner_add_suite(sr, UploadSuite());

@@ -7,7 +7,6 @@ using namespace std;
 #include "fileListStorage.h"
 #include "filePattern.h"
 #include "threads.h"
-#include "amzHeaders.h"
 
 #define UPLOAD_SUCCESS 1
 #define UPLOAD_FAILED 0
@@ -51,7 +50,7 @@ private:
 
 	static void extractMD5FromETagHeaders(char *headers, char *md5);
 	static char *createRealLocalPath(char *prefix, char *path);
-	static void addUidAndGidHeaders(uid_t uid, gid_t gid, AmzHeaders *amzHeaders);
+	static void addUidAndGidHeaders(uid_t uid, gid_t gid, MicroCurl *microCurl);
 	void logDebugMtime(char *path, uint32_t mtimeDb, uint32_t mtimeFs);
 	char *calculateFileMd5(char *localPath);
 

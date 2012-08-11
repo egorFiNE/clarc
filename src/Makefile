@@ -1,24 +1,24 @@
 VERSION=0.0.7
-BASIC_FLAGS=-Wall -D_FILE_OFFSET_BITS=64 `xml2-config --cflags` -DVERSION=\"$(VERSION)\" -Wno-write-strings -pthread -ftrapv 
+BASIC_FLAGS=-Wall -O0 -g -D_FILE_OFFSET_BITS=64 `xml2-config --cflags` -DVERSION=\"$(VERSION)\" -Wno-write-strings -pthread -ftrapv 
 LDFLAGS_BASIC=`xml2-config --libs` -L/usr/local/lib -lcurl /usr/local/lib/libre2.a
 
 UNAME := $(shell uname)
 ifeq ($(UNAME), Linux)
-FLAGS=$(BASIC_FLAGS) -Ofast -funsafe-loop-optimizations -ftracer  -fvariable-expansion-in-unroller -fprefetch-loop-arrays  -ffast-math  -mfpmath=sse -ftrapv -fstack-check
+FLAGS=$(BASIC_FLAGS) -funsafe-loop-optimizations -ftracer  -fvariable-expansion-in-unroller -fprefetch-loop-arrays  -ffast-math  -mfpmath=sse -ftrapv -fstack-check
 CFLAGS=$(FLAGS)
 CXXFLAGS=$(FLAGS)
 LDFLAGS=$(LDFLAGS_BASIC) -lsqlite3 
 endif
 
 ifeq ($(UNAME), Darwin)
-FLAGS=$(BASIC_FLAGS) -O3  -ffast-math  -ftrapv 
+FLAGS=$(BASIC_FLAGS) -ffast-math  -ftrapv 
 CFLAGS=$(FLAGS) -D_DARWIN_FEATURE_64_BIT_INODE 
 CXXFLAGS=$(FLAGS) -D_DARWIN_FEATURE_64_BIT_INODE 
 LDFLAGS=$(LDFLAGS_BASIC) -lz -lssl -lcrypto ../libsqlite3.a
 endif
 
-OBJS=localFileList.o fileListStorage.o upload.o base64.o help.o utils.o curlResponse.o amazonCredentials.o \
-	main.o remoteListOfFiles.o filePattern.o amzHeaders.o sha1.o hmac-sha1.o memxor.o logger.o threads.o \
+OBJS=localFileList.o fileListStorage.o upload.o base64.o help.o utils.o amazonCredentials.o \
+	main.o remoteListOfFiles.o filePattern.o sha1.o hmac-sha1.o memxor.o logger.o threads.o \
 	destination.o deleter.o md5.o microCurl.o
 HEADERS=*.h
 

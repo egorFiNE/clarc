@@ -43,17 +43,8 @@ START_TEST(Upload_extractMD5FromETagHeaders) {
 	Uploader::extractMD5FromETagHeaders(NULL, md5);
 	fail_unless(strlen(md5)==0);
 
-	Uploader::extractMD5FromETagHeaders("sdfsdf\nETag: \"68b329da9893e34099c7d8ad5cb9c940\"\nsdfsdf", md5);
+	Uploader::extractMD5FromETagHeaders("\"68b329da9893e34099c7d8ad5cb9c940\"", md5);
 	fail_unless(strcmp(md5, "68b329da9893e34099c7d8ad5cb9c940")==0);
-
-	Uploader::extractMD5FromETagHeaders("sdfsdf\nETag: \"68b329da9893e34099c7d8ad5cb9c940\"", md5);
-	fail_unless(strcmp(md5, "68b329da9893e34099c7d8ad5cb9c940")==0);
-
-	Uploader::extractMD5FromETagHeaders("ETag: \"68b329da9893e34099c7d8ad5cb9c9401\"", md5);
-	fail_unless(strlen(md5)==0);
-
-	Uploader::extractMD5FromETagHeaders("ETag: \"68b329da9893e34099c7d8ad5cb9c94\"", md5);
-	fail_unless(strlen(md5)==0);
 } END_TEST
 
 Suite *UploadSuite(void) {

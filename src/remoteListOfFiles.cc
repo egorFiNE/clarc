@@ -14,17 +14,14 @@ using namespace std;
 extern "C" {
 #include "utils.h"
 #include "base64.h"
-#include "curlResponse.h"
 #include "logger.h"
 }
 
 #include "remoteListOfFiles.h"
 #include "amazonCredentials.h"
-#include "amzHeaders.h"
 #include "threads.h"
-#include "settings.h"
-
 #include "microCurl.h"
+#include "settings.h"
 
 RemoteListOfFiles::RemoteListOfFiles(AmazonCredentials *amazonCredentials) {
 	this->amazonCredentials = amazonCredentials;
@@ -173,6 +170,7 @@ int RemoteListOfFiles::parseListOfFiles(char *body, uint64_t bodySize, uint8_t *
 
 int RemoteListOfFiles::performGetOnBucket(char *url, char *marker, int setLocationHeader, char *body, uint64_t *bodySize, uint32_t *statusCode, char *errorResult) {
 	MicroCurl *microCurl = new MicroCurl();
+
 	microCurl->method = METHOD_GET;
 
 	char *date = getIsoDate();
@@ -187,6 +185,7 @@ int RemoteListOfFiles::performGetOnBucket(char *url, char *marker, int setLocati
 
 	char *authorization = amazonCredentials->createAuthorizationHeader(stringToSign); 
 	free(stringToSign);
+	if (microCurl->body!=NULL) { printf("Not null1\n"); fflush(stdout); }
 
 	if (authorization == NULL) {
 		free(date);
@@ -217,7 +216,6 @@ int RemoteListOfFiles::performGetOnBucket(char *url, char *marker, int setLocati
 	}
 
 	microCurl->url = strdup(postUrl);
-
 	LOG(LOG_DBG, "[File list] GET %s", postUrl);
 	free(postUrl);
 
@@ -229,6 +227,7 @@ int RemoteListOfFiles::performGetOnBucket(char *url, char *marker, int setLocati
 	microCurl->maxConnects = MAXCONNECTS;
 	microCurl->lowSpeedLimit = LOW_SPEED_LIMIT;
 
+	microCurl->prepare();
 	CURLcode res = microCurl->go();
 
 	*statusCode = microCurl->httpStatusCode;
@@ -256,135 +255,21 @@ int RemoteListOfFiles::performGetOnBucket(char *url, char *marker, int setLocati
 	}
 }
 
-/*
-int RemoteListOfFiles::performGetOnBucket(char *url, char *marker, int setLocationHeader, char *body, uint64_t *bodySize, uint32_t *statusCode, char *errorResult) {
-	char method[4]="GET";
-
-	char *date = getIsoDate(); 
-
-	CURL *curl = curl_easy_init();
-
-	char *canonicalizedResource;
-	asprintf(&canonicalizedResource, "/%s/%s", amazonCredentials->bucket, setLocationHeader ? "?location" : "");
-
-	char *stringToSign;
-	asprintf(&stringToSign, "%s\n\n%s\n%s\n%s", method, "", date, canonicalizedResource);
-	free(canonicalizedResource);
-
-	char *authorization = amazonCredentials->createAuthorizationHeader(stringToSign); 
-	free(stringToSign);
-
-	if (authorization == NULL) {
-		free(date);
-		curl_easy_cleanup(curl);		
-		strcpy(errorResult, "Error in auth module");
-		return LIST_FAILED;
-	}
-
-	char *postUrl;
-	if (url) {
-		postUrl = strdup(url);
-	} else {
-		postUrl = amazonCredentials->generateUrl((char *) "", this->useSsl);
-	}
-
-	if (marker && strlen(marker) > 0) {
-		if (strstr(postUrl, marker)==NULL) {
-			postUrl = (char*) realloc(postUrl, strlen(postUrl) + strlen(marker) + 16);
-			strcat(postUrl, "?marker=");
-			strcat(postUrl, marker);
-		}
-
-	} else if (setLocationHeader) {
-		if (strstr(postUrl, "?location")==NULL) {
-			postUrl = (char*) realloc(postUrl, strlen(postUrl) + 16);
-			strcat(postUrl, "?location");
-		}
-	}
-
-	struct CurlResponse curlResponse;
-	CurlResponseInit(&curlResponse);
-
-	curl_easy_setopt(curl, CURLOPT_URL, postUrl);
-	LOG(LOG_DBG, "[File list] GET %s", postUrl);
-	free(postUrl);
-
-	struct curl_slist *slist = NULL;
-
-	slist = AmzHeaders::addHeader(slist, "Date", date);
-	free(date);
-
-	slist = AmzHeaders::addHeader(slist, "Authorization", authorization);
-	free(authorization);
-
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
-	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
-
-	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, this->connectTimeout);
-	curl_easy_setopt(curl, CURLOPT_MAXCONNECTS, MAXCONNECTS);
-	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->networkTimeout);
-	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, LOW_SPEED_LIMIT);
-
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&curlResponse);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlResponseBodyCallback);
-
-	curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, &CurlResponseHeadersCallback);
-	curl_easy_setopt(curl, CURLOPT_WRITEHEADER, (void *)&curlResponse); 
-
-	CURLcode res = curl_easy_perform(curl);
-
-	curl_slist_free_all(slist);
-
-	*statusCode = 0;
-
-	if (res==CURLE_OK) {
-		long httpStatus = 0;
-		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpStatus);
-		*statusCode = (uint32_t) httpStatus;
-
-		if (httpStatus==307) {
-			extractLocationFromHeaders(curlResponse.headers, errorResult);
-			*bodySize=0;
-		} else { 
-			memcpy(body, curlResponse.body, curlResponse.bodySize);
-			*bodySize = (uint64_t) curlResponse.bodySize;
-		}
-
-		curl_easy_cleanup(curl);
-		CurlResponseFree(&curlResponse);
-
-		return LIST_SUCCESS;
-
-	} else { 
-		strcpy(errorResult, "Error performing request");
-		curl_easy_cleanup(curl);
-		CurlResponseFree(&curlResponse);
-		return LIST_FAILED;
-	}
-}
-*/
-
-size_t readFunctionForRegionCreate(void *ptr, size_t size, size_t nmemb, void *userdata)  {
-	strcpy((char *)ptr, (char*) userdata);
-	return strlen((char*)userdata);
-}
-
 int RemoteListOfFiles::performPutOnBucket(char *url, char *region, uint32_t *statusCode, char *errorResult) {
-	char method[4]="PUT";
+	MicroCurl *microCurl = new MicroCurl();
+	microCurl->method = METHOD_PUT;
 
 	char *date = getIsoDate(); 
-
-	CURL *curl = curl_easy_init();
 
 	char *canonicalizedResource;
 	asprintf(&canonicalizedResource, "/%s/", amazonCredentials->bucket);
 
-	AmzHeaders *amzHeaders = new AmzHeaders();
-	amzHeaders->add((char *) "x-amz-acl", (char *) "private");
-	char *amzHeadersToSign = amzHeaders->serializeIntoStringToSign();
+	microCurl->addHeader("x-amz-acl", "private");
+
+	char *amzHeadersToSign = microCurl->serializeAmzHeadersIntoStringToSign();
 
 	char *stringToSign;
-	asprintf(&stringToSign, "%s\n\n%s\n%s\n%s%s", method, "", date, amzHeadersToSign, canonicalizedResource); 
+	asprintf(&stringToSign, "PUT\n\n%s\n%s\n%s%s", "", date, amzHeadersToSign, canonicalizedResource); 
 	free(canonicalizedResource);
 	free(amzHeadersToSign);
 
@@ -393,7 +278,7 @@ int RemoteListOfFiles::performPutOnBucket(char *url, char *region, uint32_t *sta
 
 	if (authorization == NULL) {
 		free(date);
-		curl_easy_cleanup(curl);		
+		delete microCurl;
 		strcpy(errorResult, "Error in auth module");
 		return LIST_FAILED;
 	}
@@ -405,82 +290,57 @@ int RemoteListOfFiles::performPutOnBucket(char *url, char *region, uint32_t *sta
 		postUrl = amazonCredentials->generateUrlForBucketCreate(this->useSsl);
 	}
 
-	struct CurlResponse curlResponse;
-	CurlResponseInit(&curlResponse);
-
-	curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
-
 	char *createBucketData = NULL;
 	if (strcmp(region, "")==0 || strcmp(region, "US")==0) {
-		curl_easy_setopt(curl, CURLOPT_INFILESIZE, 0);
+		microCurl->postData = NULL;
+		microCurl->postSize = 0;
 	} else { 
 		asprintf(&createBucketData, "<CreateBucketConfiguration xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" \
 			"<LocationConstraint>%s</LocationConstraint></CreateBucketConfiguration>\n", region);
-
-		curl_easy_setopt(curl, CURLOPT_READDATA, createBucketData);
-		curl_easy_setopt(curl, CURLOPT_READFUNCTION, &readFunctionForRegionCreate);
-		curl_easy_setopt(curl, CURLOPT_INFILESIZE, strlen(createBucketData));
+		microCurl->postData = strdup(createBucketData);
+		microCurl->postSize = strlen(createBucketData);
 	}
 
-	curl_easy_setopt(curl, CURLOPT_URL, postUrl);
+	microCurl->url = strdup(postUrl);
 	LOG(LOG_DBG, "[Create Bucket] PUT %s", postUrl);
 	free(postUrl);
 
-	struct curl_slist *slist = NULL;
-
-	slist = AmzHeaders::addHeader(slist, "Date", date);
+	microCurl->addHeader("Date", date);
 	free(date);
 
-	slist = AmzHeaders::addHeader(slist, "Authorization", authorization);
+	microCurl->addHeader("Authorization", authorization);
 	free(authorization);
 
-	slist = curl_slist_append(slist, "Expect:");
+	microCurl->addHeader("Expect", "");
 
-	slist = amzHeaders->serializeIntoCurl(slist);
-	delete amzHeaders;
+	microCurl->connectTimeout = this->connectTimeout;
+	microCurl->maxConnects = MAXCONNECTS;
+	microCurl->networkTimeout = this->networkTimeout;
+	microCurl->lowSpeedLimit = LOW_SPEED_LIMIT;
 
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
-	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
-
-	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, this->connectTimeout);
-	curl_easy_setopt(curl, CURLOPT_MAXCONNECTS, MAXCONNECTS);
-	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->networkTimeout);
-	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, LOW_SPEED_LIMIT);
-
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&curlResponse);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlResponseBodyCallback);
-
-	curl_easy_setopt(curl, CURLOPT_WRITEHEADER, (void *)&curlResponse); 
-	curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, &CurlResponseHeadersCallback);
-
-	CURLcode res = curl_easy_perform(curl);
+	microCurl->prepare();
+	CURLcode res = microCurl->go();
 
 	if (createBucketData!=NULL) {
 		free(createBucketData);
 	}
 
-	curl_slist_free_all(slist);
-
-	*statusCode = 0;
+	*statusCode = microCurl->httpStatusCode;
 
 	if (res==CURLE_OK) {
-		long httpStatus = 0;
-		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpStatus);
-		*statusCode = (uint32_t) httpStatus;
-
-		if (httpStatus==307) {
-			extractLocationFromHeaders(curlResponse.headers, errorResult);
+		if (microCurl->httpStatusCode==307) {
+			char *location = microCurl->getHeader("location");
+			strcpy(errorResult, location);
+			free(location);
 		}
 
-		curl_easy_cleanup(curl);
-		CurlResponseFree(&curlResponse);
+		delete microCurl;
 
 		return CREATE_SUCCESS;
 
 	} else { 
 		strcpy(errorResult, "Error performing request");
-		curl_easy_cleanup(curl);
-		CurlResponseFree(&curlResponse);
+		delete microCurl;
 		return CREATE_FAILED;
 	}
 }
@@ -642,6 +502,7 @@ int RemoteListOfFiles::performHeadOnFile(char *url, char *remotePath, uint32_t *
 	microCurl->networkTimeout = this->networkTimeout;
 	microCurl->lowSpeedLimit = LOW_SPEED_LIMIT;
 
+	microCurl->prepare();
 	CURLcode res = microCurl->go();
 
 	*statusCode = microCurl->httpStatusCode;

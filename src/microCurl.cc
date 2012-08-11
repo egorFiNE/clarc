@@ -17,7 +17,6 @@ using namespace std;
 extern "C" {
 #include "utils.h"
 #include "base64.h"
-#include "curlResponse.h"
 #include "logger.h"
 }
 
@@ -31,18 +30,42 @@ MicroCurl::MicroCurl() {
 	this->maxConnects=-1;
 	this->lowSpeedLimit=-1;
 	this->url = NULL;
-
+	this->postData = NULL;
+	this->postSize = 0;
+	this->fileIn = NULL;
+	this->bodySize=0;
+	this->httpStatusCode=0;
 	this->body=NULL;
-	this->reset();
+	this->curlErrors = NULL;
 }
 
 MicroCurl::~MicroCurl() {
 	free(this->url);
+
 	if (this->body!=NULL) {
 		free(this->body);
 	}
+	if (this->postData!=NULL) {
+		free(this->postData);
+	}
+	if (this->curlErrors!=NULL) {
+		free(this->curlErrors);
+	}
 }
 
+void MicroCurl::reset() {
+	if (this->body!=NULL) {
+		free(this->body);
+	}
+	if (this->curlErrors!=NULL) {
+		free(this->curlErrors);
+	}
+	this->bodySize=0;
+	this->httpStatusCode=0;
+
+	resultingHeaderNamesList.clear();
+	resultingHeaderValuesList.clear();
+}
 
 void MicroCurl::addHeader(char *name, char *format, ...) {
 	char *result;
@@ -54,17 +77,6 @@ void MicroCurl::addHeader(char *name, char *format, ...) {
 	this->headerNamesList.push_back(name);
 	this->headerValuesList.push_back(result);
 	free(result);
-}
-
-void MicroCurl::reset() {
-	if (this->body!=NULL) {
-		free(this->body);
-	}
-	this->bodySize=0;
-	this->httpStatusCode=0;
-
-	resultingHeaderNamesList.clear();
-	resultingHeaderValuesList.clear();
 }
 
 void MicroCurl::parseHeaders(char *headers, uint32_t headersSize) {
@@ -116,13 +128,67 @@ char *MicroCurl::getHeader(char *name) {
 	return NULL;
 }
 
-CURLcode MicroCurl::go() {
+size_t readFunctionForMicroCurl(void *ptr, size_t size, size_t nmemb, void *userdata)  {
+	strcpy((char *)ptr, (char*) userdata);
+	return strlen((char*)userdata);
+}
+
+struct CurlResponse {
+	char *body;
+	uint64_t bodySize;
+	char *headers;
+	uint64_t headersSize;
+};
+
+size_t curlResponseHeadersCallback(void *contents, size_t size, size_t nmemb, struct CurlResponse *curlResponse) {
+	size_t realsize = size * nmemb;
+	curlResponse->headers = (char *) realloc(curlResponse->headers, curlResponse->headersSize + realsize + 1);
+	if (curlResponse->headers == NULL) {
+		LOG(LOG_FATAL, "[curl] Out of memory");
+		exit(1);
+	}
+
+	memcpy(&(curlResponse->headers[curlResponse->headersSize]), contents, realsize);
+	curlResponse->headersSize += realsize;
+	curlResponse->headers[curlResponse->headersSize] = 0;
+
+	return realsize;
+}
+
+size_t curlResponseBodyCallback(void *contents, size_t size, size_t nmemb, struct CurlResponse *curlResponse) {
+	size_t realsize = size * nmemb;
+
+	curlResponse->body = (char *) realloc(curlResponse->body, curlResponse->bodySize + realsize + 1);
+	if (curlResponse->body == NULL) {
+		LOG(LOG_FATAL, "[curl] Out of memory");
+		exit(1);
+	}
+
+	memcpy(&(curlResponse->body[curlResponse->bodySize]), contents, realsize);
+	curlResponse->bodySize += realsize;
+	curlResponse->body[curlResponse->bodySize] = 0;
+
+	return realsize;
+}
+
+
+CURL *MicroCurl::prepare() {
 	this->reset();
-
-	struct CurlResponse curlResponse;
-	CurlResponseInit(&curlResponse);
-
 	this->curl = curl_easy_init();
+	return this->curl;
+}
+
+
+CURLcode MicroCurl::go() {
+	struct CurlResponse curlResponse;
+
+	curlResponse.body = (char *) malloc(1);
+	curlResponse.body[0]=0;
+	curlResponse.bodySize = 0;
+
+	curlResponse.headers = (char *) malloc(1);
+	curlResponse.headers[0]=0;
+	curlResponse.headersSize = 0;
 
 	if (this->debug) {
 		curl_easy_setopt(this->curl, CURLOPT_VERBOSE, 1);
@@ -146,13 +212,33 @@ CURLcode MicroCurl::go() {
 	}
 
 	curl_easy_setopt(this->curl, CURLOPT_WRITEDATA, (void *)&curlResponse);
-	curl_easy_setopt(this->curl, CURLOPT_WRITEFUNCTION, CurlResponseBodyCallback);
+	curl_easy_setopt(this->curl, CURLOPT_WRITEFUNCTION, curlResponseBodyCallback);
 
-	curl_easy_setopt(this->curl, CURLOPT_HEADERFUNCTION, &CurlResponseHeadersCallback);
 	curl_easy_setopt(this->curl, CURLOPT_WRITEHEADER, (void *)&curlResponse); 
+	curl_easy_setopt(this->curl, CURLOPT_HEADERFUNCTION, &curlResponseHeadersCallback);
 
 	if (this->method==METHOD_HEAD) {
-		curl_easy_setopt(curl, CURLOPT_NOBODY, 1);
+		curl_easy_setopt(this->curl, CURLOPT_NOBODY, 1);
+
+	} else if (this->method==METHOD_PUT) {
+		curl_easy_setopt(this->curl, CURLOPT_UPLOAD, 1L);
+		if (this->fileIn!=NULL) {
+			curl_easy_setopt(this->curl, CURLOPT_READDATA, this->fileIn);
+			curl_easy_setopt(this->curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t) this->fileSize);
+		} else if (this->postSize==0) {
+			curl_easy_setopt(this->curl, CURLOPT_INFILESIZE, 0);
+		} else { 
+			curl_easy_setopt(this->curl, CURLOPT_READDATA, this->postData);
+			curl_easy_setopt(this->curl, CURLOPT_READFUNCTION, &readFunctionForMicroCurl);
+			curl_easy_setopt(this->curl, CURLOPT_INFILESIZE, this->postSize);
+		}
+	} else if (this->method==METHOD_POST) {
+		curl_easy_setopt(this->curl, CURLOPT_POST, 1L);
+		curl_easy_setopt(this->curl, CURLOPT_POSTFIELDS, NULL);
+
+		curl_easy_setopt(this->curl, CURLOPT_READDATA, this->postData);
+		curl_easy_setopt(this->curl, CURLOPT_POSTFIELDSIZE, this->postSize);
+		curl_easy_setopt(this->curl, CURLOPT_READFUNCTION, &readFunctionForMicroCurl);
 	}
 
 	struct curl_slist *slist = NULL;
@@ -164,9 +250,14 @@ CURLcode MicroCurl::go() {
 		free(header);
 	}
 
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
+	curl_easy_setopt(this->curl, CURLOPT_HTTPHEADER, slist);
+
+	this->curlErrors = (char *) malloc(CURL_ERROR_SIZE);
+	this->curlErrors[0]=0;
+	curl_easy_setopt(this->curl, CURLOPT_ERRORBUFFER, this->curlErrors); // FIXME free
 
 	CURLcode res = curl_easy_perform(this->curl);
+
 	curl_slist_free_all(slist);
 
 	curl_easy_getinfo(this->curl, CURLINFO_RESPONSE_CODE, &this->httpStatusCode);
@@ -176,8 +267,40 @@ CURLcode MicroCurl::go() {
 
 	this->parseHeaders(curlResponse.headers, curlResponse.headersSize);
 
-	curl_easy_cleanup(curl);
+	// now we are dealing with a weird curl or amazon bug. Sometimes we get CURLE_SEND_ERROR, 
+	// but the request has been performed.
+	if (strlen(curlResponse.headers)>1) {
+		if (strstr(curlResponse.headers, "HTTP/1.1 200 OK")==curlResponse.headers) {
+			this->httpStatusCode=200;
+		}
+	}
+
+	curl_easy_cleanup(this->curl);
 	free(curlResponse.headers);
 
 	return res;
 }
+
+char *MicroCurl::serializeAmzHeadersIntoStringToSign() {
+	// okay here I cheat and use C++. Please forgive me or rewrite in plain C.
+	std::vector<std::string> headersList;
+	for(std::vector<int>::size_type i = 0; i != this->headerNamesList.size(); i++) {
+		if (strncmp(this->headerNamesList[i].c_str(), "x-amz", 5)==0) {
+			char *header;
+			asprintf(&header, "%s:%s\n", this->headerNamesList[i].c_str(), this->headerValuesList[i].c_str());
+			headersList.push_back(header);
+			free(header);
+		}
+	}
+
+	std::sort(headersList.begin(), headersList.end());
+
+	std::string result;
+
+	for(std::vector<int>::size_type i = 0; i != this->headerNamesList.size(); i++) {
+		result.append(headersList[i]);
+	}
+
+	return strdup((char *) result.c_str());
+}
+
