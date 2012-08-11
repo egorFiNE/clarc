@@ -7,35 +7,6 @@
 #include "base64.h"
 #include "hmac.h"
 
-void extractLocationFromHeaders(char *headers, char *locationResult) {
-	*locationResult=0;
-	if (!headers) {
-		return;
-	}
-	char *locationPointer = strstr(headers, "Location: ");
-	if (locationPointer) {
-		locationPointer+=10;
-
-		if (strlen(locationPointer)<=0) {
-			return;
-		}
-
-		char *endPointer = locationPointer;
-		while (*endPointer!=0 && *endPointer!='\n' && *endPointer!='\r') {
-			endPointer++;
-		}
-
-		if (endPointer==locationPointer) {
-			return;
-		}
-
-		int len = endPointer-locationPointer;
-
-		strncpy(locationResult, locationPointer, len);
-		locationResult[len]=0;
-	}
-}
-
 char *getIsoDate() {
 	time_t rawtime;
 	time(&rawtime);

@@ -7,4 +7,3 @@
 char *getIsoDate();
 char *guessContentType(char *filename);
 char *hrSize(uint64_t size);
-void extractLocationFromHeaders(char *headers, char *locationResult);
