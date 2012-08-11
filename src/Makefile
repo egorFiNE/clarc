@@ -1,5 +1,5 @@
 VERSION=0.0.7
-BASIC_FLAGS=-Wall -O0 -g -D_FILE_OFFSET_BITS=64 `xml2-config --cflags` -DVERSION=\"$(VERSION)\" -Wno-write-strings -pthread -ftrapv 
+BASIC_FLAGS=-Wall -D_FILE_OFFSET_BITS=64 `xml2-config --cflags` -DVERSION=\"$(VERSION)\" -Wno-write-strings -pthread -ftrapv 
 LDFLAGS_BASIC=`xml2-config --libs` -L/usr/local/lib -lcurl /usr/local/lib/libre2.a
 
 UNAME := $(shell uname)
@@ -11,7 +11,7 @@ LDFLAGS=$(LDFLAGS_BASIC) -lsqlite3
 endif
 
 ifeq ($(UNAME), Darwin)
-FLAGS=$(BASIC_FLAGS) -ffast-math  -ftrapv 
+FLAGS=$(BASIC_FLAGS) -ffast-math  -ftrapv  -O3
 CFLAGS=$(FLAGS) -D_DARWIN_FEATURE_64_BIT_INODE 
 CXXFLAGS=$(FLAGS) -D_DARWIN_FEATURE_64_BIT_INODE 
 LDFLAGS=$(LDFLAGS_BASIC) -lz -lssl -lcrypto ../libsqlite3.a
