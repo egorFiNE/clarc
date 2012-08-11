@@ -1,4 +1,4 @@
-VERSION=0.0.7
+VERSION=0.0.8
 BASIC_FLAGS=-Wall -D_FILE_OFFSET_BITS=64 `xml2-config --cflags` -DVERSION=\"$(VERSION)\" -Wno-write-strings -pthread -ftrapv 
 LDFLAGS_BASIC=`xml2-config --libs` -L/usr/local/lib -lcurl /usr/local/lib/libre2.a
 
