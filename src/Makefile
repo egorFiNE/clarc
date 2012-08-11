@@ -4,7 +4,7 @@ LDFLAGS_BASIC=`xml2-config --libs` -L/usr/local/lib -lcurl /usr/local/lib/libre2
 
 UNAME := $(shell uname)
 ifeq ($(UNAME), Linux)
-FLAGS=$(BASIC_FLAGS) -funsafe-loop-optimizations -ftracer  -fvariable-expansion-in-unroller -fprefetch-loop-arrays  -ffast-math  -mfpmath=sse -ftrapv -fstack-check
+FLAGS=$(BASIC_FLAGS) -Ofast -funsafe-loop-optimizations -ftracer  -fvariable-expansion-in-unroller -fprefetch-loop-arrays  -ffast-math  -mfpmath=sse -ftrapv -fstack-check
 CFLAGS=$(FLAGS)
 CXXFLAGS=$(FLAGS)
 LDFLAGS=$(LDFLAGS_BASIC) -lsqlite3 
