@@ -21,7 +21,8 @@ extern "C" {
 #include <pwd.h>
 #include <grp.h>
 #include "logger.h"
-	
+#include "md5.h"
+
 // this is declared explicitly instead of including unistd.h because some
 // linux distributions have clang broken with it. Fortunately, sleep() is 
 // the same on all sane OS.
@@ -199,8 +200,9 @@ CURLcode Uploader::uploadFile(
 
 	char *canonicalizedResource;
 	asprintf(&canonicalizedResource, "/%s/%s", amazonCredentials->bucket, escapedRemotePath);
-	
-	char *stringToSign = (char *)malloc(strlen(canonicalizedResource) + strlen(amzHeadersToSign) + 1024); // 1k is enough to hold other headers
+
+	 // 1k is enough to hold other headers	
+	char *stringToSign = (char *)malloc(strlen(canonicalizedResource) + strlen(amzHeadersToSign) + 1024);
 	sprintf(stringToSign, "%s\n%s\n%s\n%s\n", method, "", contentType, date);
 	strcat(stringToSign, amzHeadersToSign);
 	strcat(stringToSign, canonicalizedResource);
@@ -343,6 +345,8 @@ int Uploader::uploadFileWithRetry(
 	do {
 		errorResult[0]=0;
 
+		LOG(LOG_DBG, "[Upload] Uploading %s -> %s", localPath, remotePath);
+
 		CURLcode res=this->uploadFile(localPath, remotePath, url, contentType, fileInfo, httpStatusCode, md5, errorResult);
 		
 		if (url!=NULL) {
@@ -422,6 +426,8 @@ struct ThreadCommand {
 	uint8_t threadNumber;
 	Uploader *self;
 	FileListStorage *fileListStorage;
+	char *storedMd5;
+	int shouldCheckMd5;
 	char *realLocalPath;
 	char *path;
 	char *contentType;
@@ -437,16 +443,49 @@ void *uploader_runOverThreadFunc(void *arg) {
 		threadCommand->realLocalPath,
 		threadCommand->path,
 		threadCommand->contentType,
-		threadCommand->fileInfo
+		threadCommand->fileInfo,
+		threadCommand->storedMd5, 
+		threadCommand->shouldCheckMd5
 	);
 
 	threadCommand->self->threads->markFree(threadCommand->threadNumber);
 
 	free(threadCommand->realLocalPath);
 	free(threadCommand->fileInfo);
+	free(threadCommand->storedMd5);
+
 	free(arg); 
 
 	pthread_exit(NULL);
+}
+
+char *Uploader::calculateFileMd5(char *localPath) {
+	FILE *fin = fopen(localPath, "r");
+	if (!fin) {
+		return NULL;
+	}
+
+	md5_state_t state;
+	md5_byte_t digest[16];
+	md5_init(&state);
+
+	char *buffer = (char *)malloc(1024*1024);
+	size_t bytesRead;
+	while ((bytesRead=fread(buffer, 1, 1024*1024, fin))) {
+		md5_append(&state, (const md5_byte_t *)buffer, bytesRead);
+	}
+	fclose(fin);
+	free(buffer);
+
+	md5_finish(&state, digest);
+
+	char *md5_1;
+	asprintf(&md5_1, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", 
+		digest[0], digest[1], digest[2], digest[3], digest[4], digest[5], digest[6], digest[7], digest[8], digest[9], 
+		digest[10], digest[11], digest[12], digest[13], digest[14], digest[15]
+	);
+
+	return md5_1;
 }
 
 void Uploader::runOverThread(
@@ -455,16 +494,39 @@ void Uploader::runOverThread(
 	char *realLocalPath, 
 	char *path, 
 	char *contentType, 
-	struct stat *fileInfo
+	struct stat *fileInfo,
+	char *storedMd5,
+	int shouldCheckMd5
 ) {
+	int res;
 	char errorResult[1024*20];
 	errorResult[0]=0;
 
-	int res = this->uploadFileWithRetryAndStore(
+	if (shouldCheckMd5) {
+		char *localMd5 = this->calculateFileMd5(realLocalPath);
+		int isSame = strcmp(localMd5, storedMd5)==0 ? 1 : 0;
+		free(localMd5);
+		if (isSame) {
+			LOG(LOG_INFO, "[Upload] %s: data not changed (md5=%s), updating meta", path, storedMd5);
+			if (!this->dryRun) {
+				// FIXME
+			}
+			this->threads->markFree(threadNumber);
+			return;
+		}
+	}
+
+	if (this->dryRun) {
+		LOG(LOG_DBG, "[Upload] [dry] %s -> %s", realLocalPath, path);
+		this->threads->markFree(threadNumber);
+		return;
+	}
+
+	res = this->uploadFileWithRetryAndStore(
 		fileListStorage, realLocalPath, path, contentType, 
-		fileInfo,
-		errorResult
+		fileInfo, errorResult
 	);
+
 	if (res==UPLOAD_FAILED) {
 		LOG(LOG_FATAL, "[Upload] FAIL %s: %s                  ", path, errorResult);
 		this->failed=1;
@@ -487,7 +549,7 @@ char *Uploader::createRealLocalPath(char *prefix, char *path) {
 
 void Uploader::logDebugMtime(char *path, uint32_t mtimeDb, uint32_t mtimeFs) {
 	if (mtimeDb==0) {
-		LOG(LOG_DBG, "[Upload] %s: no stored mtime, uploading", path);
+		LOG(LOG_DBG, "[Upload] %s: no stored mtime", path);
 	} else { 
 		struct tm *timeinfo;
 		time_t m;
@@ -502,7 +564,7 @@ void Uploader::logDebugMtime(char *path, uint32_t mtimeDb, uint32_t mtimeFs) {
 		char *mtimeFsHr = (char *)malloc(128);
 		mtimeFsHr[0]=0;
 		strftime(mtimeFsHr, 128, "%F %T", timeinfo);
-		LOG(LOG_DBG, "[Upload] %s: stored mtime=%d (%s), filesystem mtime=%d (%s), uploading", 
+		LOG(LOG_DBG, "[Upload] %s: stored mtime=%d (%s), filesystem mtime=%d (%s)", 
 			path,
 			mtimeDb, mtimeDbHr, mtimeFs, mtimeFsHr
 		);
@@ -551,7 +613,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, LocalFileList *files
 			continue;
 		}
 	
-		char md5[33] = "";
+		char *md5 = (char *) malloc(33);
 		uint64_t mtime=0;
 		int res = fileListStorage->lookup(path, md5, &mtime);
 		if (res!=STORAGE_SUCCESS) {
@@ -562,7 +624,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, LocalFileList *files
 			continue;
 		}
 
-		if (res>0 && mtime == (uint64_t) fileInfo->st_mtime) {
+		if (mtime>0 && mtime == (uint64_t) fileInfo->st_mtime) {
 			LOG(LOG_DBG, "[Upload] %s not changed", path);
 			this->uploadedSize+=files->sizes[i];
 			free(fileInfo);
@@ -572,39 +634,27 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, LocalFileList *files
 			this->logDebugMtime(path, mtime, fileInfo->st_mtime);
 		}
 
-		if (this->dryRun) {
-			LOG(LOG_INFO, "[Upload] [dry] Uploaded %s                  ", path);
-			free(fileInfo);
-			free(realLocalPath);
-		} else { 
+		int threadNumber = threads->sleepTillThreadFree();
+		threads->markBusy(threadNumber);
 
-#ifndef SINGLETHREAD
-			int threadNumber = threads->sleepTillThreadFree();
-			threads->markBusy(threadNumber);
-#endif
-			struct ThreadCommand *threadCommand = (struct ThreadCommand *) malloc(sizeof(struct ThreadCommand));
+		struct ThreadCommand *threadCommand = (struct ThreadCommand *) malloc(sizeof(struct ThreadCommand));
+		threadCommand->threadNumber = threadNumber;
+		threadCommand->self = this;
 
-			threadCommand->self = this;
-			threadCommand->fileInfo = fileInfo; 
-			threadCommand->contentType = guessContentType(path);
-			threadCommand->path = path;
-			threadCommand->realLocalPath = realLocalPath;
-			threadCommand->fileListStorage = fileListStorage;
+		threadCommand->fileInfo = fileInfo; 
+		threadCommand->contentType = guessContentType(path);
+		threadCommand->path = path;
+		threadCommand->realLocalPath = realLocalPath;
+		threadCommand->fileListStorage = fileListStorage;
+		threadCommand->storedMd5 = md5; // free()ed in runOverThread 
+		threadCommand->shouldCheckMd5 =  mtime>0 ? 1 : 0; 
 
-#ifdef SINGLETHREAD
-			threadCommand->threadNumber = 1; 
-			uploader_runOverThreadFunc(threadCommand);
-#else 
-			threadCommand->threadNumber = threadNumber;
-
-			pthread_t threadId;
-			int rc = pthread_create(&threadId, &attr, uploader_runOverThreadFunc, (void *)threadCommand);
-			threads->setThreadId(threadNumber, threadId);
-			if (rc) {
-				LOG(LOG_FATAL, "Return code from pthread_create() is %d, exit", rc);
-				exit(-1);
-			}
-#endif
+		pthread_t threadId;
+		int rc = pthread_create(&threadId, &attr, uploader_runOverThreadFunc, (void *)threadCommand);
+		threads->setThreadId(threadNumber, threadId);
+		if (rc) {
+			LOG(LOG_FATAL, "Return code from pthread_create() is %d, exit", rc);
+			exit(-1);
 		}
 	}
 

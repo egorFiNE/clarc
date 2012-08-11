@@ -53,6 +53,7 @@ private:
 	static char *createRealLocalPath(char *prefix, char *path);
 	static void addUidAndGidHeaders(uid_t uid, gid_t gid, AmzHeaders *amzHeaders);
 	void logDebugMtime(char *path, uint32_t mtimeDb, uint32_t mtimeFs);
+	char *calculateFileMd5(char *localPath);
 
 public:
 	Threads *threads;
@@ -73,7 +74,16 @@ public:
 	void progress(char *path, double uploadedBytes, double ulnow, double ultotal);
 	int uploadFiles(FileListStorage *fileListStorage, LocalFileList *files, char *prefix);
 	int uploadDatabase(char *databasePath, char *databaseFilename);
-	void runOverThread(uint8_t threadNumber, FileListStorage *fileListStorage, char *realLocalPath, char *path, char *contentType, struct stat *fileInfo);
+	void runOverThread(
+		uint8_t threadNumber, 
+		FileListStorage *fileListStorage, 
+		char *realLocalPath, 
+		char *path, 
+		char *contentType, 
+		struct stat *fileInfo,
+		char *storedMd5,
+		int shouldCheckMd5
+	);
 };
 
 #endif
