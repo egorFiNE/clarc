@@ -22,32 +22,61 @@ extern "C" {
 
 #include "microCurl.h"
 
-MicroCurl::MicroCurl() {
+MicroCurl::MicroCurl(AmazonCredentials *amazonCredentials) {
+	this->amazonCredentials = amazonCredentials;
+
 	this->debug=0;
+
 	this->method=0;
+	this->url = NULL;
+
 	this->connectTimeout=-1;
 	this->networkTimeout=-1;
 	this->maxConnects=-1;
 	this->lowSpeedLimit=-1;
-	this->url = NULL;
+
+	this->canonicalizedResource = NULL;
 	this->postData = NULL;
 	this->postSize = 0;
 	this->fileIn = NULL;
+
+
 	this->bodySize=0;
 	this->httpStatusCode=0;
 	this->body=NULL;
 	this->curlErrors = NULL;
+	this->headerContentType = NULL;
+	this->headerContentMd5 = NULL;
+	this->headerDate	 = NULL;
 }
 
 MicroCurl::~MicroCurl() {
 	free(this->url);
 
+	if (this->headerContentType!=NULL) {
+		free(this->headerContentType);
+	}
+
+	if (this->headerContentMd5!=NULL) {
+		free(this->headerContentMd5);
+	}
+
+	if (this->headerDate!=NULL) {
+		free(this->headerDate);
+	}
+
+	if (this->canonicalizedResource!=NULL) {
+		free(this->canonicalizedResource);
+	}
+
 	if (this->body!=NULL) {
 		free(this->body);
 	}
+
 	if (this->postData!=NULL) {
 		free(this->postData);
 	}
+
 	if (this->curlErrors!=NULL) {
 		free(this->curlErrors);
 	}
@@ -57,6 +86,7 @@ void MicroCurl::reset() {
 	if (this->body!=NULL) {
 		free(this->body);
 	}
+
 	if (this->curlErrors!=NULL) {
 		free(this->curlErrors);
 	}
@@ -76,6 +106,14 @@ void MicroCurl::addHeader(char *name, char *format, ...) {
 
 	this->headerNamesList.push_back(name);
 	this->headerValuesList.push_back(result);
+
+	if (strcasecmp(name, "content-type")==0) {
+		this->headerContentType = strdup(result);
+	} else if (strcasecmp(name, "content-md5")==0) {
+		this->headerContentMd5 = strdup(result);
+	} else if (strcasecmp(name, "date")==0) {
+		this->headerDate = strdup(result);
+	}
 	free(result);
 }
 
@@ -175,6 +213,22 @@ size_t curlResponseBodyCallback(void *contents, size_t size, size_t nmemb, struc
 CURL *MicroCurl::prepare() {
 	this->reset();
 	this->curl = curl_easy_init();
+
+	char *date = getIsoDate();
+	this->addHeader("Date", date);
+	free(date);
+
+	char *stringToSign = this->getStringToSign();
+
+	char *authorization = this->amazonCredentials->sign(stringToSign); 
+	free(stringToSign);
+	if (authorization==NULL) {
+		return NULL;
+	}
+	this->addHeader("Authorization", authorization);
+
+	free(authorization);
+
 	return this->curl;
 }
 
@@ -232,6 +286,7 @@ CURLcode MicroCurl::go() {
 			curl_easy_setopt(this->curl, CURLOPT_READFUNCTION, &readFunctionForMicroCurl);
 			curl_easy_setopt(this->curl, CURLOPT_INFILESIZE, this->postSize);
 		}
+
 	} else if (this->method==METHOD_POST) {
 		curl_easy_setopt(this->curl, CURLOPT_POST, 1L);
 		curl_easy_setopt(this->curl, CURLOPT_POSTFIELDS, NULL);
@@ -254,7 +309,7 @@ CURLcode MicroCurl::go() {
 
 	this->curlErrors = (char *) malloc(CURL_ERROR_SIZE);
 	this->curlErrors[0]=0;
-	curl_easy_setopt(this->curl, CURLOPT_ERRORBUFFER, this->curlErrors); // FIXME free
+	curl_easy_setopt(this->curl, CURLOPT_ERRORBUFFER, this->curlErrors); 
 
 	CURLcode res = curl_easy_perform(this->curl);
 
@@ -282,10 +337,12 @@ CURLcode MicroCurl::go() {
 }
 
 char *MicroCurl::serializeAmzHeadersIntoStringToSign() {
-	// okay here I cheat and use C++. Please forgive me or rewrite in plain C.
+	int c=0;
+
 	std::vector<std::string> headersList;
-	for(std::vector<int>::size_type i = 0; i != this->headerNamesList.size(); i++) {
+	for(std::vector<int>::size_type i = 0; i < this->headerNamesList.size(); i++) {
 		if (strncmp(this->headerNamesList[i].c_str(), "x-amz", 5)==0) {
+			c++;
 			char *header;
 			asprintf(&header, "%s:%s\n", this->headerNamesList[i].c_str(), this->headerValuesList[i].c_str());
 			headersList.push_back(header);
@@ -293,14 +350,59 @@ char *MicroCurl::serializeAmzHeadersIntoStringToSign() {
 		}
 	}
 
+	if (c==0) {
+		return strdup("");
+	}
+
 	std::sort(headersList.begin(), headersList.end());
 
 	std::string result;
 
-	for(std::vector<int>::size_type i = 0; i != this->headerNamesList.size(); i++) {
+	for(std::vector<int>::size_type i = 0; i < headersList.size(); i++) {
 		result.append(headersList[i]);
 	}
 
 	return strdup((char *) result.c_str());
+}
+
+const char *MicroCurl::getMethodName() {
+	switch(this->method) {
+		case METHOD_POST:
+			return "POST";
+		case METHOD_HEAD:
+			return "HEAD";
+		case METHOD_PUT:
+			return "PUT";
+		default: 
+			return "GET";
+	}
+}
+
+char *MicroCurl::getStringToSign() {
+	char *amzHeaders = this->serializeAmzHeadersIntoStringToSign();
+
+	char *stringToSign;
+	asprintf(&stringToSign, 
+		"%s\n"  // HTTP-Verb + "\n" +
+		"%s\n"  // Content-MD5 + "\n" +
+		"%s\n"	// Content-Type + "\n" +
+		"%s\n"  // Date + "\n" +
+		"%s"    // CanonicalizedAmzHeaders +
+		"%s",   // CanonicalizedResource
+
+		
+		this->getMethodName(), // HTTP-Verb + "\n" +
+		this->headerContentMd5 == NULL ? "" : this->headerContentMd5, // Content-MD5 + "\n" +
+		this->headerContentType == NULL ? "" : this->headerContentType, // Content-Type + "\n" +
+		this->headerDate, // Date + "\n" +
+		amzHeaders==NULL ? "" : amzHeaders, // CanonicalizedAmzHeaders +
+		this->canonicalizedResource
+	);
+
+	if (amzHeaders!=NULL) {
+		free(amzHeaders);
+	}
+
+	return stringToSign;
 }
 

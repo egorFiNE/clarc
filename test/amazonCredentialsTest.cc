@@ -54,7 +54,7 @@ START_TEST(AmazonCredentials_generateUrl) {
 } END_TEST
 
 
-START_TEST(AmazonCredentials_createAuthorizationHeader) {
+START_TEST(AmazonCredentials_sign) {
 	char stringToSign[2048] = 
 		"GET\n" \
 		"\n" \
@@ -62,7 +62,7 @@ START_TEST(AmazonCredentials_createAuthorizationHeader) {
 		"Tue, 27 Mar 2007 19:36:42 +0000\n" \
 		"/johnsmith/photos/puppy.jpg";
 
-	char *auth = amazonCredentials->createAuthorizationHeader(stringToSign);
+	char *auth = amazonCredentials->sign(stringToSign);
 	fail_if(strcmp(auth, "AWS AKIAIOSFODNN7EXAMPLE:bWq2s1WEIj+Ydj0vQ697zp+IXMU=") != 0, NULL);
 	free(auth);
 } END_TEST
@@ -74,7 +74,7 @@ Suite *AmazonCredentialsSuite(void) {
 	TCase *tc = tcase_create("AmazonCredentials");
 	tcase_add_checked_fixture (tc, AmazonCredentials_setup, AmazonCredentials_teardown);
 	tcase_add_test(tc, AmazonCredentials_generateUrl);
-	tcase_add_test(tc, AmazonCredentials_createAuthorizationHeader);
+	tcase_add_test(tc, AmazonCredentials_sign);
 	suite_add_tcase(s, tc);
 
 	return s;

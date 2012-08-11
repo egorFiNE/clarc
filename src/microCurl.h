@@ -8,6 +8,8 @@ using namespace std;
 
 #include <curl/curl.h>
 
+#include "amazonCredentials.h"
+
 #define METHOD_GET  1
 #define METHOD_POST 2
 #define METHOD_PUT  3
@@ -17,6 +19,11 @@ class MicroCurl
 {
 private: 
 	CURL *curl;
+	char *headerContentType;
+	char *headerContentMd5;
+	char *headerDate;
+	AmazonCredentials *amazonCredentials;
+
 	std::vector<std::string> headerNamesList;
 	std::vector<std::string> headerValuesList;
 
@@ -25,11 +32,13 @@ private:
 
 	void reset();
 	void parseHeaders(char *headers, uint32_t headersSize);
+	const char *getMethodName();
 
 public:
+	int debug;
 	int method;
 	char *url;
-	int debug;
+	char *canonicalizedResource;
 	int connectTimeout;
 	int networkTimeout;
 	int maxConnects;
@@ -47,11 +56,12 @@ public:
 	char *body;
 	uint32_t bodySize;
 
-	MicroCurl();
+	MicroCurl(AmazonCredentials *amazonCredentials);
 	~MicroCurl();
 
 	void addHeader(char *name, char *format, ...);
 	char *serializeAmzHeadersIntoStringToSign();
+	char *getStringToSign();
 
 	CURL *prepare();
 	CURLcode go();

@@ -12,19 +12,18 @@ using namespace std;
 class AmazonCredentials
 {
 private: 
-	int sign(char *result, char *stringToSign);
+	int signString(char *result, char *stringToSign);
 	
 public:
 	AmazonCredentials(char *accessKeyId, char *secretAccessKey, char *bucket, char *endPoint);
 	~AmazonCredentials();
 
 	char *generateUrl(char *remotePath, int useSsl);
-
 	char *generateUrlForBucketCreate(int useSsl);
 	char *generateUrlForObjectDelete(int useSsl);
 	static int isValidRegionForBucketCreate(char *region);
 
-	char *createAuthorizationHeader(char *stringToSign);
+	char *sign(char *stringToSign);
 
 	char *accessKeyId;
 	char *secretAccessKey;

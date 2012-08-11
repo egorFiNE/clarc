@@ -146,12 +146,8 @@ CURLcode Uploader::uploadFile(
 		}
 	}
 
-	MicroCurl *microCurl = new MicroCurl();
+	MicroCurl *microCurl = new MicroCurl(amazonCredentials);
 	microCurl->method = METHOD_PUT;
-
-	char *date = getIsoDate();
-
-	char *escapedRemotePath = microCurl->escapePath(remotePath);
 
 	Uploader::addUidAndGidHeaders(fileInfo->st_uid, fileInfo->st_gid, microCurl);
 
@@ -177,30 +173,11 @@ CURLcode Uploader::uploadFile(
 		microCurl->addHeader((char *) "x-amz-meta-localpath", localPath);
 	} 
 
-	char *amzHeadersToSign = microCurl->serializeAmzHeadersIntoStringToSign();
+	char *escapedRemotePath = microCurl->escapePath(remotePath);
 
 	char *canonicalizedResource;
 	asprintf(&canonicalizedResource, "/%s/%s", amazonCredentials->bucket, escapedRemotePath);
-
-	 // 1k is enough to hold other headers	
-	char *stringToSign = (char *)malloc(strlen(canonicalizedResource) + strlen(amzHeadersToSign) + 1024);
-	sprintf(stringToSign, "PUT\n%s\n%s\n%s\n", "", contentType, date);
-	strcat(stringToSign, amzHeadersToSign);
-	strcat(stringToSign, canonicalizedResource);
-
-	char *authorization = amazonCredentials->createAuthorizationHeader(stringToSign); 
-
-	free(stringToSign);
-	free(amzHeadersToSign);
-	free(canonicalizedResource);
-
-	if (authorization==NULL) {
-		delete microCurl;
-		free(date);
-		free(escapedRemotePath);
-		strcpy(errorResult, "Error in auth");
-		return UPLOAD_FILE_FUNCTION_FAILED;
-	}
+	microCurl->canonicalizedResource = canonicalizedResource; //will be freed in microcurl
 
 	char *postUrl;
 	if (url) {
@@ -221,12 +198,6 @@ CURLcode Uploader::uploadFile(
 		microCurl->fileSize = fileInfo->st_size;
 	}
 
-	microCurl->addHeader("Date", date);
-	free(date);
-
-	microCurl->addHeader("Authorization", authorization);
-	free(authorization);
-
 	microCurl->addHeader("Content-type", contentType);
 	microCurl->addHeader("Expect", "");
 
@@ -241,11 +212,17 @@ CURLcode Uploader::uploadFile(
 	uploadProgress->uploader = this;
 
 	CURL *curl = microCurl->prepare();
+	if (curl==NULL) {
+		// we don't free things here because it's a fatal error and we'll exit soon anyway
+		strcpy(errorResult, "Error in auth module");
+		delete microCurl;
+		return UPLOAD_FILE_FUNCTION_FAILED;
+	}
+
 	curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, &progressFunction);
 	curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, (void *) uploadProgress);
 	curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0);
 
-	microCurl->prepare();
 	CURLcode res = microCurl->go();
 
 	if (isSoftLink) {
@@ -274,14 +251,12 @@ CURLcode Uploader::uploadFile(
 		}
 
 		delete microCurl;
-
 		return CURLE_OK;
 
 	} else { 
 		strcpy(errorResult, microCurl->curlErrors);
 
 		delete microCurl;
-
 		return res;
 	}
 }

@@ -68,7 +68,7 @@ char *AmazonCredentials::generateUrl(char *remotePath, int useSsl) {
 	return resultUrl;
 }
 
-int AmazonCredentials::sign(char *result, char *stringToSign) {
+int AmazonCredentials::signString(char *result, char *stringToSign) {
 	// char *key = strdup(this->secretAccessKey); was needed for something
 	char resultBinary[64];
 	int res = hmac_sha1(this->secretAccessKey, strlen(this->secretAccessKey), stringToSign, strlen(stringToSign), resultBinary);
@@ -80,10 +80,10 @@ int AmazonCredentials::sign(char *result, char *stringToSign) {
 	}
 }
 
- char *AmazonCredentials::createAuthorizationHeader(char *stringToSign) {
+ char *AmazonCredentials::sign(char *stringToSign) {
 	char signature[1024] = "";
 
-	int res = this->sign(signature, stringToSign);
+	int res = this->signString(signature, stringToSign);
 	if (res) {
 		char *authorization = (char*) malloc(strlen(accessKeyId) + strlen(signature) + 10);
 		authorization[0]=0;

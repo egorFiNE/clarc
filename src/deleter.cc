@@ -47,21 +47,13 @@ Deleter::~Deleter() {
 }
 
 
-// size_t readFunctionForObjectDelete(void *ptr, size_t size, size_t nmemb, void *userdata)  {
-// 	strcpy((char *)ptr, (char*) userdata);
-// 	return strlen((char*)userdata);
-// }
-
 int Deleter::performPostOnBucket(char *xml, uint32_t *statusCode, char *errorResult) {
-	MicroCurl *microCurl = new MicroCurl();
+	MicroCurl *microCurl = new MicroCurl(this->amazonCredentials);
 	microCurl->method=METHOD_POST;
 
-	char *date = getIsoDate(); 
-
-	//CURL *curl = curl_easy_init();
-
 	char *canonicalizedResource;
-	asprintf(&canonicalizedResource, "/%s/", this->amazonCredentials->bucket);
+	asprintf(&canonicalizedResource, "/%s/?delete", this->amazonCredentials->bucket);
+	microCurl->canonicalizedResource = canonicalizedResource; // will be freed by microcurl
 
 	md5_state_t state;
 	md5_byte_t digest[16];
@@ -71,20 +63,7 @@ int Deleter::performPostOnBucket(char *xml, uint32_t *statusCode, char *errorRes
 
 	char base64Md5[100];
 	base64_encode((char *)digest, 16, (char*) base64Md5, 64);
-
-	char *stringToSign;
-	asprintf(&stringToSign, "POST\n%s\n%s\n%s\n%s?delete", base64Md5, "", date, canonicalizedResource); 
-	free(canonicalizedResource);
-
-	char *authorization = this->amazonCredentials->createAuthorizationHeader(stringToSign); 
-	free(stringToSign);
-
-	if (authorization == NULL) {
-		free(date);
-		delete microCurl;
-		strcpy(errorResult, "Error in auth module");
-		return 0;
-	}
+	microCurl->addHeader("Content-MD5", (char *) base64Md5);
 
 	char *postUrl = this->amazonCredentials->generateUrlForObjectDelete(this->useSsl);
 	microCurl->url = strdup(postUrl);
@@ -94,23 +73,20 @@ int Deleter::performPostOnBucket(char *xml, uint32_t *statusCode, char *errorRes
 	microCurl->postData = strdup(xml);
 	microCurl->postSize = strlen(xml);
 
-	microCurl->addHeader("Date", date);
-	free(date);
-
-	microCurl->addHeader("Authorization", authorization);
-	free(authorization);
-
 	microCurl->addHeader("Expect", "");
 	microCurl->addHeader("Content-Type", "");
-
-	microCurl->addHeader("Content-MD5", (char *) base64Md5);
 
 	microCurl->connectTimeout = this->connectTimeout;
 	microCurl->maxConnects = MAXCONNECTS;
 	microCurl->networkTimeout = this->networkTimeout;
 	microCurl->lowSpeedLimit = LOW_SPEED_LIMIT;
 
-	microCurl->prepare();
+	if (microCurl->prepare()==NULL) {
+		strcpy(errorResult, "Error in auth module");
+		delete microCurl;
+		return 0;
+	}
+	
 	CURLcode res = microCurl->go();
 
 	*statusCode = microCurl->httpStatusCode;

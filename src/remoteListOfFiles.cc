@@ -92,7 +92,13 @@ void RemoteListOfFiles::add(char *path, char *md5) {
 	}
 }
 
-int RemoteListOfFiles::parseListOfFiles(char *body, uint64_t bodySize, uint8_t *isTruncated, char *lastKey, char *errorResult) {
+int RemoteListOfFiles::parseListOfFiles(
+	char *body, 
+	uint64_t bodySize, 
+	uint8_t *isTruncated, 
+	char *lastKey, 
+	char *errorResult
+) {
 	*errorResult=0;
 	*lastKey=0;
 	*isTruncated=0;
@@ -168,31 +174,21 @@ int RemoteListOfFiles::parseListOfFiles(char *body, uint64_t bodySize, uint8_t *
 	return 1;
 }
 
-int RemoteListOfFiles::performGetOnBucket(char *url, char *marker, int setLocationHeader, char *body, uint64_t *bodySize, uint32_t *statusCode, char *errorResult) {
-	MicroCurl *microCurl = new MicroCurl();
-
+int RemoteListOfFiles::performGetOnBucket(
+	char *url, 
+	char *marker, 
+	int setLocationHeader, 
+	char *body, 
+	uint64_t *bodySize, 
+	uint32_t *statusCode, 
+	char *errorResult
+) {
+	MicroCurl *microCurl = new MicroCurl(amazonCredentials);
 	microCurl->method = METHOD_GET;
-
-	char *date = getIsoDate();
-	microCurl->addHeader("Date", date);
 
 	char *canonicalizedResource;
 	asprintf(&canonicalizedResource, "/%s/%s", amazonCredentials->bucket, setLocationHeader ? "?location" : "");
-
-	char *stringToSign;
-	asprintf(&stringToSign, "GET\n\n%s\n%s\n%s", "", date, canonicalizedResource);
-	free(canonicalizedResource);
-
-	char *authorization = amazonCredentials->createAuthorizationHeader(stringToSign); 
-	free(stringToSign);
-	if (microCurl->body!=NULL) { printf("Not null1\n"); fflush(stdout); }
-
-	if (authorization == NULL) {
-		free(date);
-		delete microCurl;
-		strcpy(errorResult, "Error in auth module");
-		return LIST_FAILED;
-	}
+	microCurl->canonicalizedResource = canonicalizedResource; // will be free()d by MicroCurl
 
 	char *postUrl;
 	if (url) {
@@ -219,15 +215,18 @@ int RemoteListOfFiles::performGetOnBucket(char *url, char *marker, int setLocati
 	LOG(LOG_DBG, "[File list] GET %s", postUrl);
 	free(postUrl);
 
-	microCurl->addHeader("Authorization", authorization);
-	free(authorization);
 
 	microCurl->networkTimeout = this->networkTimeout;
 	microCurl->connectTimeout = this->connectTimeout;
 	microCurl->maxConnects = MAXCONNECTS;
 	microCurl->lowSpeedLimit = LOW_SPEED_LIMIT;
 
-	microCurl->prepare();
+	if (microCurl->prepare()==NULL) {
+		strcpy(errorResult, "Error in auth module");
+		delete microCurl;
+		return LIST_FAILED;
+	}
+
 	CURLcode res = microCurl->go();
 
 	*statusCode = microCurl->httpStatusCode;
@@ -244,7 +243,6 @@ int RemoteListOfFiles::performGetOnBucket(char *url, char *marker, int setLocati
 		}
 
 		delete microCurl;
-
 		return LIST_SUCCESS;
 
 	} else { 
@@ -256,32 +254,14 @@ int RemoteListOfFiles::performGetOnBucket(char *url, char *marker, int setLocati
 }
 
 int RemoteListOfFiles::performPutOnBucket(char *url, char *region, uint32_t *statusCode, char *errorResult) {
-	MicroCurl *microCurl = new MicroCurl();
+	MicroCurl *microCurl = new MicroCurl(this->amazonCredentials);
 	microCurl->method = METHOD_PUT;
-
-	char *date = getIsoDate(); 
 
 	char *canonicalizedResource;
 	asprintf(&canonicalizedResource, "/%s/", amazonCredentials->bucket);
+	microCurl->canonicalizedResource = canonicalizedResource; // will be freed by microcurl
 
 	microCurl->addHeader("x-amz-acl", "private");
-
-	char *amzHeadersToSign = microCurl->serializeAmzHeadersIntoStringToSign();
-
-	char *stringToSign;
-	asprintf(&stringToSign, "PUT\n\n%s\n%s\n%s%s", "", date, amzHeadersToSign, canonicalizedResource); 
-	free(canonicalizedResource);
-	free(amzHeadersToSign);
-
-	char *authorization = amazonCredentials->createAuthorizationHeader(stringToSign); 
-	free(stringToSign);
-
-	if (authorization == NULL) {
-		free(date);
-		delete microCurl;
-		strcpy(errorResult, "Error in auth module");
-		return LIST_FAILED;
-	}
 
 	char *postUrl;
 	if (url) {
@@ -305,12 +285,6 @@ int RemoteListOfFiles::performPutOnBucket(char *url, char *region, uint32_t *sta
 	LOG(LOG_DBG, "[Create Bucket] PUT %s", postUrl);
 	free(postUrl);
 
-	microCurl->addHeader("Date", date);
-	free(date);
-
-	microCurl->addHeader("Authorization", authorization);
-	free(authorization);
-
 	microCurl->addHeader("Expect", "");
 
 	microCurl->connectTimeout = this->connectTimeout;
@@ -318,7 +292,15 @@ int RemoteListOfFiles::performPutOnBucket(char *url, char *region, uint32_t *sta
 	microCurl->networkTimeout = this->networkTimeout;
 	microCurl->lowSpeedLimit = LOW_SPEED_LIMIT;
 
-	microCurl->prepare();
+	if (microCurl->prepare()==NULL) {
+		if (createBucketData!=NULL) {
+			free(createBucketData);
+		}
+		delete microCurl;
+		strcpy(errorResult, "Error in auth module");
+		return HEAD_FAILED;
+	}
+
 	CURLcode res = microCurl->go();
 
 	if (createBucketData!=NULL) {
@@ -453,31 +435,21 @@ int RemoteListOfFiles::downloadList() {
 	return LIST_SUCCESS;
 }
 
-int RemoteListOfFiles::performHeadOnFile(char *url, char *remotePath, uint32_t *remoteMtime, uint32_t *statusCode, char *errorResult) {
-	MicroCurl *microCurl = new MicroCurl();
+int RemoteListOfFiles::performHeadOnFile(
+	char *url, 
+	char *remotePath, 
+	uint32_t *remoteMtime, 
+	uint32_t *statusCode, 
+	char *errorResult
+) {
+	MicroCurl *microCurl = new MicroCurl(this->amazonCredentials);
 	microCurl->method=METHOD_HEAD;
 
 	char *escapedRemotePath=microCurl->escapePath(remotePath);
 	
 	char *canonicalizedResource;
 	asprintf(&canonicalizedResource, "/%s/%s", amazonCredentials->bucket, escapedRemotePath);
-
-	char *date = getIsoDate(); 
-
-	char *stringToSign;
-	asprintf(&stringToSign, "HEAD\n\n%s\n%s\n%s", "", date, canonicalizedResource);
-	free(canonicalizedResource);
-
-	char *authorization = amazonCredentials->createAuthorizationHeader(stringToSign);
-	free(stringToSign);
-
-	if (authorization == NULL) {
-		strcpy(errorResult, "Error in auth module");
-		free(date);
-		free(escapedRemotePath);
-		delete microCurl;
-		return HEAD_FAILED;
-	}
+	microCurl->canonicalizedResource = canonicalizedResource; // will be freed in microcurl
 
 	char *headUrl;
 	if (url) {
@@ -491,18 +463,17 @@ int RemoteListOfFiles::performHeadOnFile(char *url, char *remotePath, uint32_t *
 	microCurl->url = strdup(headUrl);
 	free(headUrl);
 
-	microCurl->addHeader("Date", date);
-	free(date);
-
-	microCurl->addHeader("Authorization", authorization);
-	free(authorization);
-
 	microCurl->connectTimeout = this->connectTimeout;
 	microCurl->maxConnects = MAXCONNECTS;
 	microCurl->networkTimeout = this->networkTimeout;
 	microCurl->lowSpeedLimit = LOW_SPEED_LIMIT;
 
-	microCurl->prepare();
+	if (microCurl->prepare()==NULL) {
+		delete microCurl;
+		strcpy(errorResult, "Error in auth module");
+		return HEAD_FAILED;
+	}
+	
 	CURLcode res = microCurl->go();
 
 	*statusCode = microCurl->httpStatusCode;
@@ -517,14 +488,12 @@ int RemoteListOfFiles::performHeadOnFile(char *url, char *remotePath, uint32_t *
 		*remoteMtime = RemoteListOfFiles::extractMtimeFromMicroCurl(microCurl);
 
 		delete microCurl;
-
 		return HEAD_SUCCESS;
 
 	} else { 
 		strcpy(errorResult, "Error performing request");
 
 		delete microCurl;
-
 		return HEAD_FAILED;
 	}
 }

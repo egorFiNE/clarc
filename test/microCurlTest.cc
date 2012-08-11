@@ -18,22 +18,25 @@ extern "C" {
 }
 
 #include "microCurl.h"
+#include "amazonCredentials.h"
 
 START_TEST(MicroCurl_mainTest) {
-	MicroCurl *microCurl = new MicroCurl();
+	AmazonCredentials *amazonCredentials = new AmazonCredentials(
+		"AKIAIOSFODNN7EXAMPLE", 
+		"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+		"bucket", "end-point"
+	);
+
+	MicroCurl *microCurl = new MicroCurl(amazonCredentials);
 	microCurl->method=METHOD_GET;
 	microCurl->url = "http://egorfine.com/ru/";
 
-	char *date = getIsoDate(); 
-
-	microCurl->addHeader("Date", date);
 	microCurl->prepare();
 	CURLcode res = microCurl->go();
 	fail_unless(res==CURLE_OK);
 	fail_unless(microCurl->httpStatusCode==200);
 
 	fail_unless(strcmp(microCurl->getHeader("content-type"), "text/html")==0);
-
 } END_TEST
 
 Suite *MicroCurlSuite(void) {
