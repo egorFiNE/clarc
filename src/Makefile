@@ -19,7 +19,7 @@ endif
 
 OBJS=localFileList.o fileListStorage.o upload.o base64.o help.o utils.o curlResponse.o amazonCredentials.o \
 	main.o remoteListOfFiles.o filePattern.o amzHeaders.o sha1.o hmac-sha1.o memxor.o logger.o threads.o \
-	destination.o deleter.o md5.o
+	destination.o deleter.o md5.o microCurl.o
 HEADERS=*.h
 
 prefix=/usr/local

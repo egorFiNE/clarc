@@ -56,18 +56,6 @@ START_TEST(RemoteListOfFiles_extractMd5FromEtag) {
 	fail_unless(RemoteListOfFiles::extractMd5FromEtag("12")==NULL);
 } END_TEST
 
-START_TEST(RemoteListOfFiles_extractMtimeFromHeaders) {
-	fail_unless(RemoteListOfFiles::extractMtimeFromHeaders("x-amz-meta-mtime: 1342552434")==1342552434);
-	fail_unless(RemoteListOfFiles::extractMtimeFromHeaders("\nsdfsdf: 234\nx-amz-meta-mtime: 1342552434\n")==1342552434);
-	fail_unless(RemoteListOfFiles::extractMtimeFromHeaders("\nsdfsdf: 234\r\nx-amz-meta-mtime: 1342552434\r\n")==1342552434);
-	fail_unless(RemoteListOfFiles::extractMtimeFromHeaders("\nsdfsdf: 234\nx-amz-meta-mtime: 3\nsirko: vasya\n")==3);
-	fail_unless(RemoteListOfFiles::extractMtimeFromHeaders("\nsdfsdf: 234\r\nx-amz-meta-mtime: 3\r\nsirko: vasya\r\n")==3);
-	fail_unless(RemoteListOfFiles::extractMtimeFromHeaders("\nsdfsdf: 234\nx-amz-meta-mtime: ")==0);
-	fail_unless(RemoteListOfFiles::extractMtimeFromHeaders("\nsdfsdf: 234\nx-amz-meta-mtime: \r\n")==0);
-	fail_unless(RemoteListOfFiles::extractMtimeFromHeaders("\nsdfsdf: 234\nx-amz-nothing: nothing")==0);
-	fail_unless(RemoteListOfFiles::extractMtimeFromHeaders("")==0);
-	fail_unless(RemoteListOfFiles::extractMtimeFromHeaders(NULL)==0);
-} END_TEST
 
 char *readXml(int num) {
 	char *path;
@@ -200,7 +188,6 @@ Suite *RemoteListOfFilesSuite(void) {
 
 	TCase *tc1 = tcase_create("static");
 	tcase_add_test(tc1, RemoteListOfFiles_extractMd5FromEtag);
-	tcase_add_test(tc1, RemoteListOfFiles_extractMtimeFromHeaders);
 	suite_add_tcase(s, tc1);
 
 	TCase *tc2 = tcase_create("main");

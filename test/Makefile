@@ -15,11 +15,11 @@ CXXFLAGS=$(CXXFLAGS_BASIC) -D_DARWIN_FEATURE_64_BIT_INODE
 LDFLAGS=$(LDFLAGS_BASIC) -lz -lssl -lcrypto ../libsqlite3.a
 endif
 
-OBJS=../src/base64.o ../src/sha1.o ../src/hmac-sha1.o ../src/memxor.o ../src/curlResponse.o ../src/utils.o ../src/logger.o
+OBJS=../src/base64.o ../src/sha1.o ../src/hmac-sha1.o ../src/memxor.o ../src/curlResponse.o ../src/utils.o ../src/logger.o ../src/md5.o
 SOURCES=../src/localFileList.cc ../src/amazonCredentials.cc ../src/amzHeaders.cc ../src/fileListStorage.cc ../src/remoteListOfFiles.cc \
-	../src/upload.cc ../src/filePattern.cc ../src/threads.cc ../src/destination.cc 
-TESTS=./localFileListTest.cc ./amazonCredentialsTest.cc ./amzHeadersTest.cc ./fileListStorageTest.cc ./remoteListOfFilesTest.cc \
-	./uploadTest.cc ./utilsTest.cc ./destinationTest.cc
+	../src/upload.cc ../src/filePattern.cc ../src/threads.cc ../src/destination.cc  ../src/microCurl.cc
+TESTS=./localFileListTest.cc ./amazonCredentialsTest.cc ./amzHeadersTest.cc ./fileListStorageTest.cc \
+	./uploadTest.cc ./utilsTest.cc ./destinationTest.cc ./microCurlTest.cc ./remoteListOfFilesTest.cc
 all: test
 
 clean:

@@ -24,6 +24,8 @@ extern "C" {
 #include "threads.h"
 #include "settings.h"
 
+#include "microCurl.h"
+
 RemoteListOfFiles::RemoteListOfFiles(AmazonCredentials *amazonCredentials) {
 	this->amazonCredentials = amazonCredentials;
 	this->paths = (char **) malloc(sizeof(char *) * 100);
@@ -52,17 +54,13 @@ RemoteListOfFiles::~RemoteListOfFiles() {
 	this->amazonCredentials = NULL;
 }
 
-uint32_t RemoteListOfFiles::extractMtimeFromHeaders(char *headers) {
-	if (headers==NULL) {
+uint32_t RemoteListOfFiles::extractMtimeFromMicroCurl(MicroCurl *microCurl) {
+	char *header = microCurl->getHeader("x-amz-meta-mtime");
+	if (header==NULL) {
 		return 0;
 	}
 
-	char *str = strstr(headers, "x-amz-meta-mtime: ");
-	if (str!=NULL) { 
-		char *space = strchr(str, ' ');
-		return (uint32_t) atoll(space);
-	}
-	return 0;
+	return (uint32_t) atoll(header);
 }
 
 char *RemoteListOfFiles::extractMd5FromEtag(char *etag) {
@@ -174,6 +172,92 @@ int RemoteListOfFiles::parseListOfFiles(char *body, uint64_t bodySize, uint8_t *
 }
 
 int RemoteListOfFiles::performGetOnBucket(char *url, char *marker, int setLocationHeader, char *body, uint64_t *bodySize, uint32_t *statusCode, char *errorResult) {
+	MicroCurl *microCurl = new MicroCurl();
+	microCurl->method = METHOD_GET;
+
+	char *date = getIsoDate();
+	microCurl->addHeader("Date", date);
+
+	char *canonicalizedResource;
+	asprintf(&canonicalizedResource, "/%s/%s", amazonCredentials->bucket, setLocationHeader ? "?location" : "");
+
+	char *stringToSign;
+	asprintf(&stringToSign, "GET\n\n%s\n%s\n%s", "", date, canonicalizedResource);
+	free(canonicalizedResource);
+
+	char *authorization = amazonCredentials->createAuthorizationHeader(stringToSign); 
+	free(stringToSign);
+
+	if (authorization == NULL) {
+		free(date);
+		delete microCurl;
+		strcpy(errorResult, "Error in auth module");
+		return LIST_FAILED;
+	}
+
+	char *postUrl;
+	if (url) {
+		postUrl = strdup(url);
+	} else {
+		postUrl = amazonCredentials->generateUrl((char *) "", this->useSsl);
+	}
+
+	if (marker && strlen(marker) > 0) {
+		if (strstr(postUrl, marker)==NULL) {
+			postUrl = (char*) realloc(postUrl, strlen(postUrl) + strlen(marker) + 16);
+			strcat(postUrl, "?marker=");
+			strcat(postUrl, marker);
+		}
+
+	} else if (setLocationHeader) {
+		if (strstr(postUrl, "?location")==NULL) {
+			postUrl = (char*) realloc(postUrl, strlen(postUrl) + 16);
+			strcat(postUrl, "?location");
+		}
+	}
+
+	microCurl->url = strdup(postUrl);
+
+	LOG(LOG_DBG, "[File list] GET %s", postUrl);
+	free(postUrl);
+
+	microCurl->addHeader("Authorization", authorization);
+	free(authorization);
+
+	microCurl->networkTimeout = this->networkTimeout;
+	microCurl->connectTimeout = this->connectTimeout;
+	microCurl->maxConnects = MAXCONNECTS;
+	microCurl->lowSpeedLimit = LOW_SPEED_LIMIT;
+
+	CURLcode res = microCurl->go();
+
+	*statusCode = microCurl->httpStatusCode;
+
+	if (res==CURLE_OK) {
+		if (microCurl->httpStatusCode==307) {
+			char *location = microCurl->getHeader("location");
+			strcpy(errorResult, location);
+			free(location);
+			*bodySize=0;
+		} else { 
+			memcpy(body, microCurl->body, microCurl->bodySize);
+			*bodySize = microCurl->bodySize;
+		}
+
+		delete microCurl;
+
+		return LIST_SUCCESS;
+
+	} else { 
+		strcpy(errorResult, "Error performing request");
+
+		delete microCurl;
+		return LIST_FAILED;
+	}
+}
+
+/*
+int RemoteListOfFiles::performGetOnBucket(char *url, char *marker, int setLocationHeader, char *body, uint64_t *bodySize, uint32_t *statusCode, char *errorResult) {
 	char method[4]="GET";
 
 	char *date = getIsoDate(); 
@@ -278,6 +362,7 @@ int RemoteListOfFiles::performGetOnBucket(char *url, char *marker, int setLocati
 		return LIST_FAILED;
 	}
 }
+*/
 
 size_t readFunctionForRegionCreate(void *ptr, size_t size, size_t nmemb, void *userdata)  {
 	strcpy((char *)ptr, (char*) userdata);
@@ -509,11 +594,10 @@ int RemoteListOfFiles::downloadList() {
 }
 
 int RemoteListOfFiles::performHeadOnFile(char *url, char *remotePath, uint32_t *remoteMtime, uint32_t *statusCode, char *errorResult) {
-	char method[5]="HEAD";
+	MicroCurl *microCurl = new MicroCurl();
+	microCurl->method=METHOD_HEAD;
 
-	CURL *curl = curl_easy_init();
-
-	char *escapedRemotePath=curl_easy_escape(curl, remotePath, 0);
+	char *escapedRemotePath=microCurl->escapePath(remotePath);
 	
 	char *canonicalizedResource;
 	asprintf(&canonicalizedResource, "/%s/%s", amazonCredentials->bucket, escapedRemotePath);
@@ -521,7 +605,7 @@ int RemoteListOfFiles::performHeadOnFile(char *url, char *remotePath, uint32_t *
 	char *date = getIsoDate(); 
 
 	char *stringToSign;
-	asprintf(&stringToSign, "%s\n\n%s\n%s\n%s", method, "", date, canonicalizedResource);
+	asprintf(&stringToSign, "HEAD\n\n%s\n%s\n%s", "", date, canonicalizedResource);
 	free(canonicalizedResource);
 
 	char *authorization = amazonCredentials->createAuthorizationHeader(stringToSign);
@@ -531,7 +615,7 @@ int RemoteListOfFiles::performHeadOnFile(char *url, char *remotePath, uint32_t *
 		strcpy(errorResult, "Error in auth module");
 		free(date);
 		free(escapedRemotePath);
-		curl_easy_cleanup(curl);
+		delete microCurl;
 		return HEAD_FAILED;
 	}
 
@@ -544,61 +628,41 @@ int RemoteListOfFiles::performHeadOnFile(char *url, char *remotePath, uint32_t *
 
 	free(escapedRemotePath);
 
-	struct CurlResponse curlResponse;
-	CurlResponseInit(&curlResponse);
-
-	curl_easy_setopt(curl, CURLOPT_URL, headUrl);
+	microCurl->url = strdup(headUrl);
 	free(headUrl);
 
-	struct curl_slist *slist = NULL;
-
-	slist = AmzHeaders::addHeader(slist, "Date", date);
+	microCurl->addHeader("Date", date);
 	free(date);
-	slist = AmzHeaders::addHeader(slist, "Authorization", authorization);
+
+	microCurl->addHeader("Authorization", authorization);
 	free(authorization);
 
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
-	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
-	curl_easy_setopt(curl, CURLOPT_NOBODY, 1);
+	microCurl->connectTimeout = this->connectTimeout;
+	microCurl->maxConnects = MAXCONNECTS;
+	microCurl->networkTimeout = this->networkTimeout;
+	microCurl->lowSpeedLimit = LOW_SPEED_LIMIT;
 
-	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, this->connectTimeout);
-	curl_easy_setopt(curl, CURLOPT_MAXCONNECTS, MAXCONNECTS);
-	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->networkTimeout);
-	curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, LOW_SPEED_LIMIT);
+	CURLcode res = microCurl->go();
 
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&curlResponse);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlResponseBodyCallback);
-
-	curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, &CurlResponseHeadersCallback);
-	curl_easy_setopt(curl, CURLOPT_WRITEHEADER, (void *)&curlResponse); 
-
-	CURLcode res = curl_easy_perform(curl);
-
-	curl_slist_free_all(slist);
-
-	*statusCode = 0;
+	*statusCode = microCurl->httpStatusCode;
 
 	if (res==CURLE_OK) {
-		long httpStatus = 0;
-		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpStatus);
-		*statusCode = (uint32_t) httpStatus;
-
-		if (httpStatus==307) {
-			extractLocationFromHeaders(curlResponse.headers, errorResult);
+		if (microCurl->httpStatusCode==307) {
+			char *location = microCurl->getHeader("location");
+			strcpy(errorResult, location);
+			free(location);
 		}
 
-		*remoteMtime = RemoteListOfFiles::extractMtimeFromHeaders(curlResponse.headers);
+		*remoteMtime = RemoteListOfFiles::extractMtimeFromMicroCurl(microCurl);
 
-		curl_easy_cleanup(curl);
-		CurlResponseFree(&curlResponse);
+		delete microCurl;
 
 		return HEAD_SUCCESS;
 
 	} else { 
 		strcpy(errorResult, "Error performing request");
 
-		curl_easy_cleanup(curl);
-		CurlResponseFree(&curlResponse);
+		delete microCurl;
 
 		return HEAD_FAILED;
 	}
@@ -662,7 +726,8 @@ void RemoteListOfFiles::runOverThread(int threadNumber, int pos) {
 				printf("\r[MetaUpdate] Updated %.1f%% (%u files out of %u)     \r", percent*100, (uint32_t) pos, this->count);
 			}
 
-			LOG(LOG_INFO, "[MetaUpdate] updated %s                                             ", this->paths[pos]);
+			LOG(LOG_INFO, "[MetaUpdate] updated %s (%d)                                             ", 
+				this->paths[pos], this->mtimes[pos]);
 			this->threads->markFree(threadNumber);
 			return;
 		}

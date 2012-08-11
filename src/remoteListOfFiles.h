@@ -11,6 +11,7 @@ using namespace std;
 #include <errno.h>
 #include "amazonCredentials.h"
 #include "threads.h"
+#include "microCurl.h"
 
 
 class RemoteListOfFiles
@@ -22,7 +23,7 @@ private:
 	int failed;
 
 	static char *extractMd5FromEtag(char *etag);
-	static uint32_t extractMtimeFromHeaders(char *headers);
+	uint32_t extractMtimeFromMicroCurl(MicroCurl *microCurl);
 
 	int parseListOfFiles(char *body, uint64_t bodySize, uint8_t *isTruncated, char *lastKey, char *errorResult);
 	int performGetOnBucket(char *url, char *marker, int setLocationHeader, char *body, uint64_t *bodySize, uint32_t *statusCode, char *errorResult);

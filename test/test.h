@@ -7,3 +7,4 @@ Suite *RemoteListOfFilesSuite(void);
 Suite *UploadSuite(void);
 Suite *UtilsSuite(void);
 Suite *DestinationSuite(void);
+Suite *MicroCurlSuite(void);
