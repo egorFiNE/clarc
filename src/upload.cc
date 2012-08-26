@@ -83,6 +83,7 @@ Uploader::Uploader(AmazonCredentials *amazonCredentials) {
 	this->failed=0;
 	this->showProgress=0;
 	this->threads = NULL;
+	this->destinationFolder = NULL;	
 
 	pthread_mutex_init(&uidMutex, NULL);
 }
@@ -597,6 +598,14 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, LocalFileList *files
 		}
 
 		char *path = (files->paths[i]+1);
+
+		char *remotePath;
+		if (this->destinationFolder!=NULL) { 
+			asprintf(&remotePath, "%s/%s", destinationFolder, path);
+		} else { 
+			remotePath = strdup(path); // not really elegant, I know
+		}
+
 		char *realLocalPath = Uploader::createRealLocalPath(prefix, path);
 		
 		struct stat *fileInfo = (struct stat *) malloc(sizeof(struct stat));
@@ -613,6 +622,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, LocalFileList *files
 			LOG(LOG_WARN, "[Upload] WARNING %s: File too large (%" PRIu64 " bytes while only %" PRIu64 " allowed), skipped", 
 				path, (uint64_t) fileInfo->st_size, (uint64_t) MAX_S3_FILE_SIZE);
 			free(realLocalPath);
+			free(remotePath);
 			free(fileInfo);
 			this->uploadedSize+=files->sizes[i];
 			continue;
@@ -620,10 +630,11 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, LocalFileList *files
 	
 		char *md5 = (char *) malloc(33);
 		uint64_t mtime=0;
-		int res = fileListStorage->lookup(path, md5, &mtime);
+		int res = fileListStorage->lookup(remotePath, md5, &mtime);
 		if (res!=STORAGE_SUCCESS) {
-			LOG(LOG_FATAL, "[Upload] FAIL %s: Oops, database query failed", path);
+			LOG(LOG_FATAL, "[Upload] FAIL %s: Oops, database query failed", remotePath);
 			free(realLocalPath);
+			free(remotePath);
 			free(fileInfo);
 			this->failed=1;
 			continue;
@@ -633,6 +644,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, LocalFileList *files
 			LOG(LOG_DBG, "[Upload] %s not changed", path);
 			this->uploadedSize+=files->sizes[i];
 			free(fileInfo);
+			free(remotePath);
 			free(realLocalPath);
 			continue;
 		} else { 
@@ -648,7 +660,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, LocalFileList *files
 
 		threadCommand->fileInfo = fileInfo; 
 		threadCommand->contentType = guessContentType(path);
-		threadCommand->path = path;
+		threadCommand->path = remotePath;
 		threadCommand->realLocalPath = realLocalPath;
 		threadCommand->fileListStorage = fileListStorage;
 		threadCommand->storedMd5 = md5; // free()ed in runOverThread 
@@ -685,8 +697,16 @@ int Uploader::uploadDatabase(char *databasePath, char *databaseFilename) {
 	char md5[33] = "";
 	uint32_t httpStatusCode=0;
 
+	char *remoteDatabasePath;
+
+	if (this->destinationFolder!=NULL) {
+		asprintf(&remoteDatabasePath, "%s/%s", this->destinationFolder, databaseFilename);
+	} else { 
+		remoteDatabasePath = strdup(databaseFilename);
+	}
+
 	char errorResult[1024*100];
-	int res = this->uploadFileWithRetry(databasePath, databaseFilename, 
+	int res = this->uploadFileWithRetry(databasePath, remoteDatabasePath,
 		(char *)"application/octet-stream", &fileInfo, &httpStatusCode, md5, errorResult);
 
 	if (res==UPLOAD_SUCCESS && httpStatusCode!=200) {

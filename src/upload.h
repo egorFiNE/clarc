@@ -78,6 +78,7 @@ public:
 	int connectTimeout;
 	int networkTimeout;
 	int uploadThreads;
+	char *destinationFolder;
 
 	void progress(char *path, double uploadedBytes, double ulnow, double ultotal);
 	int uploadFiles(FileListStorage *fileListStorage, LocalFileList *files, char *prefix);

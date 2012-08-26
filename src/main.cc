@@ -38,7 +38,6 @@ Destination *destination;
 FILE *logStream;
 int logLevel = LOG_ERR;
 
-
 int rebuildDatabase(RemoteListOfFiles *remoteListOfFiles, AmazonCredentials *amazonCredentials, FileListStorage *fileListStorage) {
 	int res = remoteListOfFiles->downloadList();
 	if (res==LIST_FAILED) { 
@@ -352,11 +351,6 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
-	if (strcmp(destination->folder, "")!=0) {
-		printf("Folders with destination are not yet supported.\n");
-		exit(1);
-	}
-
 	AmazonCredentials *amazonCredentials = new AmazonCredentials(
 		accessKeyId, 
 		secretAccessKey,
@@ -431,6 +425,7 @@ int main(int argc, char *argv[]) {
 		uploader->useRrs = useRrs;
 		uploader->makeAllPublic = makeAllPublic;
 		uploader->showProgress = showProgress;
+		uploader->destinationFolder = destination->folder;
 		if (skipSsl) {
 			uploader->useSsl=0;
 		}
