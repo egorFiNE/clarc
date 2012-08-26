@@ -600,7 +600,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, LocalFileList *files
 		char *path = (files->paths[i]+1);
 
 		char *remotePath;
-		if (this->destinationFolder!=NULL) { 
+		if (this->destinationFolder!=NULL && strlen(this->destinationFolder)>0) { 
 			asprintf(&remotePath, "%s/%s", destinationFolder, path);
 		} else { 
 			remotePath = strdup(path); // not really elegant, I know
