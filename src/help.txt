@@ -4,7 +4,7 @@ Usage:
 SOURCE is the absolute path to folder that is being uploaded.
 DEST is the Amazon S3 destination in format:
 
-  s3://BUCKET[.ENDPOINT]/
+  s3://BUCKET[.ENDPOINT]/[FOLDER]
 
 Amazon AWS credentials: 
   --accessKeyId <string> 
@@ -35,6 +35,6 @@ OPTIONS:
 Example:
   clarc  --accessKeyId XXX  --secretAccessKey YYY  --rebuild  --rrs  /home/egor/Pictures/  s3://pics.egorfine.com.s3-eu-west-1.amazonaws.com/
 
-  clarc  --accessKeyId XXX  --secretAccessKey YYY  --create US  --exclude .+\\.m4a$   --exclude \\/Justin\\ Bieber\\/.+$  --progress  /home/egor/Music/  s3://music.egorfine.com/
+  clarc  --accessKeyId XXX  --secretAccessKey YYY  --create US  --exclude .+\\.m4a$   --exclude \\/Justin\\ Bieber\\/.+$  --progress  /home/egor/Music/Dubstep  s3://music.egorfine.com/rap/
 
 There's more: see also man clarc. 

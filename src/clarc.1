@@ -18,13 +18,13 @@ keeps track of changes by storing file metadata in a small local database. It po
 .SH DEST
 \fIDEST\fR is the Amazon S3 destination in format:
 
-  s3://BUCKET[.ENDPOINT]/
+  s3://BUCKET[.ENDPOINT]/[FOLDER]
 
 For example, 
 
   s3://test.egorfine.com/
   s3://test.egorfine.com.s3.amazonaws.com/
-  s3://something.else.net.s3-ap-southeast-1.amazonaws.com/
+  s3://something.else.net.s3-ap-southeast-1.amazonaws.com/pictures/
 .SH PATH OPTIONS
 .PP
 .TP
@@ -124,7 +124,7 @@ See documentation for examples; this is a single one.
   clarc --rebuild 
         --accessKeyId UKIOIZZADUGFFDD7SFVF 
         --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  
-        /home/egor/Music/  s3://music.egorfine.com/
+        /home/egor/Music/Dubstep  s3://music.egorfine.com/shit
 .SH AUTHOR
 Copyright \(co 2012 Egor Egorov  <me@egorfine.com>
 .SH REPORTING BUGS
