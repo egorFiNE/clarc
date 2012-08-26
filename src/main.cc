@@ -339,7 +339,6 @@ int main(int argc, char *argv[]) {
 	xmlInitParser();
 
 	logStream = stdout;
-	logLevel = LOG_DBG;
 
 	excludeFilePattern = new FilePattern();
 
