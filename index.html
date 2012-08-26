@@ -74,13 +74,13 @@
 <pre><code>clarc <span class="codeBackslash">\</span>
       --accessKeyId UKIOIZZADUGFFDD7SFVF  <span class="codeBackslash">\</span>
       --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  <span class="codeBackslash">\</span>
-      <span class="paramSource">/home/egor/Music/</span>  <span class="paramDest">s3://music.egorfine.com/</span></code></pre>
+      <span class="paramSource">/home/egor/Music/Dubstep</span>  <span class="paramDest">s3://music.egorfine.com/rock</span></code></pre>
 
 <p>
-	This will upload all local files from <span class="paramSource">/home/egor/Music</span> to Amazon S3 bucket <span class="paramDest">music.egorfine.com</span>. <b>clarc</b> will create a database file <span style="white-space: nowrap"><span class="paramSource">/home/egor/Music</span>/.clarc.sqlite3</span>. 
+	This will upload all local files from <span class="paramSource">/home/egor/Music/Dubstep</span> to Amazon S3 bucket <span class="paramDest">music.egorfine.com</span> into folder <span class="paramDest">rock</span>. <b>clarc</b> will create a database file <span style="white-space: nowrap"><span class="paramSource">/home/egor/Music/Dubstep</span>/.clarc.sqlite3</span>. 
 </p>
 
-<p>Subsequent invocations of the same command line will scan <span class="paramSource">/home/egor/Music</span> and compare the file system metadata with the one stored in database. Only changes will be uploaded to S3.
+<p>Subsequent invocations of the same command line will scan <span class="paramSource">/home/egor/Music/Dubstep</span> and compare the file system metadata with the one stored in database. Only changes will be uploaded to S3.
 </p>
 
 <h2 id="downloads">Downloads</h2>
@@ -121,17 +121,19 @@
 
 <h3>S3 destination</h3>
 
-<p>S3 destination is specified in the form <code>s3://BUCKET<span class="paramDest">[.ENDPOINT]</span>/</code> where <span class="paramDest">ENDPOINT</span> is optional and could be one of those: 
+<p>S3 destination is specified in the form <code>s3://BUCKET<span class="paramDest">[.ENDPOINT]</span>/<span class="paramDest">[FOLDER]</span></code>. <span class="paramDest">ENDPOINT</span> is optional and could be one of those: 
 
 	<ul style="padding-left: 2em">
-<li>s3.amazonaws.com (<i>the default</i>);</li>
-<li>s3-us-west-2.amazonaws.com;</li>
-<li>s3-us-west-1.amazonaws.com;</li>
-<li>s3-eu-west-1.amazonaws.com;</li>
-<li>s3-ap-southeast-1.amazonaws.com;</li>
-<li>s3-ap-northeast-1.amazonaws.com;</li>
-<li>s3-sa-east-1.amazonaws.com;</li>
+		<li>s3.amazonaws.com (<i>the default</i>);</li>
+		<li>s3-us-west-2.amazonaws.com;</li>
+		<li>s3-us-west-1.amazonaws.com;</li>
+		<li>s3-eu-west-1.amazonaws.com;</li>
+		<li>s3-ap-southeast-1.amazonaws.com;</li>
+		<li>s3-ap-northeast-1.amazonaws.com;</li>
+		<li>s3-sa-east-1.amazonaws.com;</li>
 	</ul>
+
+<span class="paramDest">FOLDER</span> is optional as well.</p>
 
 <h3>Path options</h3>
 
