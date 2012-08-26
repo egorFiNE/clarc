@@ -48,6 +48,15 @@ private:
 		char *errorResult
 	);
 
+	int updateMeta(
+		FileListStorage *fileListStorage,
+		char *realLocalPath, 
+		char *path, 
+		char *contentType, 
+		struct stat *fileInfo,
+		char *errorResult
+	);
+
 	static void extractMD5FromETagHeaders(char *headers, char *md5);
 	static char *createRealLocalPath(char *prefix, char *path);
 	static void addUidAndGidHeaders(uid_t uid, gid_t gid, MicroCurl *microCurl);

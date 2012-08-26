@@ -418,9 +418,76 @@ char *Uploader::calculateFileMd5(char *localPath) {
 	return md5_1;
 }
 
+int Uploader::updateMeta(
+	FileListStorage *fileListStorage,
+	char *realLocalPath, 
+	char *remotePath, 
+	char *contentType, 
+	struct stat *fileInfo,
+	char *errorResult
+) {
+	MicroCurl *microCurl = new MicroCurl(amazonCredentials);
+	microCurl->method = METHOD_PUT;
+
+	microCurl->addHeader((char *) "x-amz-acl", this->makeAllPublic ? (char *) "public-read" : (char *) "private");
+
+	if (this->useRrs) {
+		microCurl->addHeader((char *) "x-amz-storage-class",(char *) "REDUCED_REDUNDANCY");
+	}
+
+	microCurl->addHeader((char *) "x-amz-meta-mode", (char *) "%o", fileInfo->st_mode);
+	microCurl->addHeader((char *) "x-amz-meta-mtime", (char *) "%llu", (uint64_t) fileInfo->st_mtime);
+
+	char *escapedRemotePath = microCurl->escapePath(remotePath);
+
+	char *canonicalizedResource;
+	asprintf(&canonicalizedResource, "/%s/%s", amazonCredentials->bucket, escapedRemotePath);
+	microCurl->canonicalizedResource = canonicalizedResource; //will be freed in microcurl
+	microCurl->addHeader((char*) "x-amz-copy-source", canonicalizedResource);
+
+	microCurl->addHeader("x-amz-metadata-directive", "REPLACE");
+	microCurl->addHeader("Expect", "");	
+
+	microCurl->url = amazonCredentials->generateUrl(escapedRemotePath, this->useSsl); 
+	printf("UTL = %s, remot Path = %s, esc = %s\n\n", microCurl->url, remotePath, escapedRemotePath);
+	free(escapedRemotePath);
+
+	microCurl->debug=1;
+
+	microCurl->networkTimeout = this->networkTimeout;
+	microCurl->connectTimeout = this->connectTimeout;
+	microCurl->maxConnects = MAXCONNECTS;
+	microCurl->lowSpeedLimit = LOW_SPEED_LIMIT;
+
+	if (microCurl->prepare()==NULL) {
+		strcpy(errorResult, "Error in auth module");
+		delete microCurl;
+		return 0;
+	}
+
+	CURLcode res = microCurl->go();
+
+	if (res==CURLE_OK) {
+		if (microCurl->httpStatusCode==307) {
+			// FIXME
+		}
+		printf("BODY=%s\n\n", microCurl->body);
+		delete microCurl;
+		return LIST_SUCCESS;
+
+	} else { 
+		strcpy(errorResult, "Error performing request");
+
+		delete microCurl;
+		return LIST_FAILED;
+	}
+
+	return 1;
+}
+
 void Uploader::runOverThread(
 	uint8_t threadNumber, 
-	FileListStorage *fileListStorage, 
+	FileListStorage *fileListStorage,
 	char *realLocalPath, 
 	char *path, 
 	char *contentType, 
@@ -439,7 +506,17 @@ void Uploader::runOverThread(
 		if (isSame) {
 			LOG(LOG_INFO, "[Upload] %s: data not changed (md5=%s), updating meta", path, storedMd5);
 			if (!this->dryRun) {
-				// FIXME
+				res = this->updateMeta(fileListStorage, realLocalPath, path, contentType, fileInfo, errorResult);
+				if (res) {
+					int sqlRes = fileListStorage->store(path, storedMd5, (uint32_t) fileInfo->st_mtime);
+					if (sqlRes!=STORAGE_SUCCESS) {
+						LOG(LOG_FATAL, "[Upload] Database failure                       ");
+						this->failed=1;
+					}
+				} else {
+					LOG(LOG_FATAL, "[Upload] FAIL meta update %s: %s                  ", path, errorResult);
+					this->failed=1;
+				} 
 			}
 			this->threads->markFree(threadNumber);
 			return;
