@@ -69,6 +69,8 @@ char *guessContentType(char *filename) {
 		result = (char *)"text/json";
 	} else if (strcmp(lowcaseExtension, "xml")==0) {
 		result = (char *)"text/xml";
+	} else if (strcmp(lowcaseExtension, "plist")==0) {
+		result = (char *)"text/xml";
 	} else if (strcmp(lowcaseExtension, "html")==0) {
 		result = (char *)"text/html";
 	} else if (strcmp(lowcaseExtension, "txt")==0) {
