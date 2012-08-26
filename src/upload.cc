@@ -499,7 +499,9 @@ void Uploader::runOverThread(
 	char errorResult[1024*20];
 	errorResult[0]=0;
 
-	if (shouldCheckMd5) {
+	int isSoftLink = (fileInfo->st_mode & S_IFLNK)==S_IFLNK ? 1 : 0;
+
+	if (!isSoftLink && shouldCheckMd5) { // we never check contents of symlinks
 		char *localMd5 = this->calculateFileMd5(realLocalPath);
 		int isSame = strcmp(localMd5, storedMd5)==0 ? 1 : 0;
 		free(localMd5);
@@ -518,14 +520,12 @@ void Uploader::runOverThread(
 					this->failed=1;
 				} 
 			}
-			this->threads->markFree(threadNumber);
 			return;
 		}
 	}
 
 	if (this->dryRun) {
 		LOG(LOG_DBG, "[Upload] [dry] %s -> %s", realLocalPath, path);
-		this->threads->markFree(threadNumber);
 		return;
 	}
 
@@ -540,8 +540,6 @@ void Uploader::runOverThread(
 	} else {
 		LOG(LOG_INFO, "[Upload] Uploaded %s              ", path);
 	}	
-
-	this->threads->markFree(threadNumber);
 }
 
 char *Uploader::createRealLocalPath(char *prefix, char *path) {
@@ -654,7 +652,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, LocalFileList *files
 		threadCommand->realLocalPath = realLocalPath;
 		threadCommand->fileListStorage = fileListStorage;
 		threadCommand->storedMd5 = md5; // free()ed in runOverThread 
-		threadCommand->shouldCheckMd5 =  mtime>0 ? 1 : 0; 
+		threadCommand->shouldCheckMd5 =  mtime > 0 ? 1 : 0; 
 
 		pthread_t threadId;
 		int rc = pthread_create(&threadId, &attr, uploader_runOverThreadFunc, (void *)threadCommand);
