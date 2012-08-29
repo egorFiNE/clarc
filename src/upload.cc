@@ -448,12 +448,12 @@ int Uploader::updateMeta(
 
 	microCurl->addHeader("x-amz-metadata-directive", "REPLACE");
 	microCurl->addHeader("Expect", "");	
+	microCurl->addHeader("Content-type", contentType);
+
+	Uploader::addUidAndGidHeaders(fileInfo->st_uid, fileInfo->st_gid, microCurl);
 
 	microCurl->url = amazonCredentials->generateUrl(escapedRemotePath, this->useSsl); 
-	printf("UTL = %s, remot Path = %s, esc = %s\n\n", microCurl->url, remotePath, escapedRemotePath);
 	free(escapedRemotePath);
-
-	microCurl->debug=1;
 
 	microCurl->networkTimeout = this->networkTimeout;
 	microCurl->connectTimeout = this->connectTimeout;
@@ -472,7 +472,7 @@ int Uploader::updateMeta(
 		if (microCurl->httpStatusCode==307) {
 			// FIXME
 		}
-		printf("BODY=%s\n\n", microCurl->body);
+
 		delete microCurl;
 		return LIST_SUCCESS;
 
