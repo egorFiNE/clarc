@@ -97,23 +97,28 @@ void MicroCurl::reset() {
 	resultingHeaderValuesList.clear();
 }
 
-void MicroCurl::addHeader(char *name, char *format, ...) {
+void MicroCurl::addHeader(char *name, char *value) {
+	this->headerNamesList.push_back(name);
+	this->headerValuesList.push_back(value);
+
+	if (strcasecmp(name, "content-type")==0) {
+		this->headerContentType = strdup(value);
+	} else if (strcasecmp(name, "content-md5")==0) {
+		this->headerContentMd5 = strdup(value);
+	} else if (strcasecmp(name, "date")==0) {
+		this->headerDate = strdup(value);
+	}
+}
+
+void MicroCurl::addHeaderFormat(char *name, char *format, ...) {
 	char *result;
 	va_list args;
 	va_start(args, format);
 	vasprintf(&result, format, args);
 	va_end(args);
 
-	this->headerNamesList.push_back(name);
-	this->headerValuesList.push_back(result);
+	this->addHeader(name, result);
 
-	if (strcasecmp(name, "content-type")==0) {
-		this->headerContentType = strdup(result);
-	} else if (strcasecmp(name, "content-md5")==0) {
-		this->headerContentMd5 = strdup(result);
-	} else if (strcasecmp(name, "date")==0) {
-		this->headerDate = strdup(result);
-	}
 	free(result);
 }
 

@@ -59,7 +59,8 @@ public:
 	MicroCurl(AmazonCredentials *amazonCredentials);
 	~MicroCurl();
 
-	void addHeader(char *name, char *format, ...);
+	void addHeader(char *name, char *value);
+	void addHeaderFormat(char *name, char *format, ...);
 	char *serializeAmzHeadersIntoStringToSign();
 	char *getStringToSign();
 

@@ -158,8 +158,8 @@ CURLcode Uploader::uploadFile(
 		microCurl->addHeader((char *) "x-amz-storage-class",(char *) "REDUCED_REDUNDANCY");
 	}
 
-	microCurl->addHeader((char *) "x-amz-meta-mode", (char *) "%o", fileInfo->st_mode);
-	microCurl->addHeader((char *) "x-amz-meta-mtime", (char *) "%llu", (uint64_t) fileInfo->st_mtime);
+	microCurl->addHeaderFormat((char *) "x-amz-meta-mode", (char *) "%o", fileInfo->st_mode);
+	microCurl->addHeaderFormat((char *) "x-amz-meta-mtime", (char *) "%llu", (uint64_t) fileInfo->st_mtime);
 
 	char *softLinkData = NULL;
 	if (isSoftLink) {
@@ -436,8 +436,8 @@ int Uploader::updateMeta(
 		microCurl->addHeader((char *) "x-amz-storage-class",(char *) "REDUCED_REDUNDANCY");
 	}
 
-	microCurl->addHeader((char *) "x-amz-meta-mode", (char *) "%o", fileInfo->st_mode);
-	microCurl->addHeader((char *) "x-amz-meta-mtime", (char *) "%llu", (uint64_t) fileInfo->st_mtime);
+	microCurl->addHeaderFormat((char *) "x-amz-meta-mode", (char *) "%o", fileInfo->st_mode);
+	microCurl->addHeaderFormat((char *) "x-amz-meta-mtime", (char *) "%llu", (uint64_t) fileInfo->st_mtime);
 
 	char *escapedRemotePath = microCurl->escapePath(remotePath);
 
