@@ -22,6 +22,7 @@ private:
 	char *databaseFilename;
 	int deleteBatch(char **batch, uint32_t batchCount, char *errorResult, uint32_t *statusCode);
 	int performPostOnBucket(char *xml, uint32_t *statusCode, char *errorResult);
+	static char *xmlEscape(char *src);
 
 public:
 	int dryRun;

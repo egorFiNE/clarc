@@ -104,6 +104,42 @@ int Deleter::performPostOnBucket(char *xml, uint32_t *statusCode, char *errorRes
 	}
 }
 
+char *Deleter::xmlEscape(char *src) {
+	char *newString = (char *) malloc(strlen(src)*5);
+	uint32_t pos=0;
+	char *p = src;
+
+	do {
+		if (*p=='<') {
+			newString[pos++]='&';
+			newString[pos++]='l';
+			newString[pos++]='t';
+			newString[pos++]=';';
+		} else if (*p=='>') {
+			newString[pos++]='&';
+			newString[pos++]='g';
+			newString[pos++]='t';
+			newString[pos++]=';';
+		} else if (*p=='&') {
+			newString[pos++]='&';
+			newString[pos++]='a';
+			newString[pos++]='m';
+			newString[pos++]='p';
+			newString[pos++]=';';
+		} else { 
+			newString[pos++]=*p;
+		}
+		p++;
+	} while(*p);
+
+	newString[pos]=0;
+	char *result = strndup(newString, pos);
+	free(newString);
+
+	return result;
+}
+
+
 int Deleter::deleteBatch(char **batch, uint32_t batchCount, char *errorResult, uint32_t *statusCode) {
 	LOG(LOG_INFO, "[Delete] %sDeleting batch of %d objects", this->dryRun ? "[dry] " : "", batchCount);
 
@@ -120,12 +156,17 @@ int Deleter::deleteBatch(char **batch, uint32_t batchCount, char *errorResult, u
 	strcat(xml, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
 	strcat(xml, "<Delete>\n");
 	strcat(xml, "<Quiet>true</Quiet>\n");
+
 	for (uint32_t i=0;i<batchCount;i++) {
+		char *escapedPath=Deleter::xmlEscape(batch[i]);
 		strcat(xml, "\t<Object><Key>");
-		strcat(xml, batch[i]); // FIXME escape 
+		printf("Deleteing %s\n", escapedPath);
+		strcat(xml, escapedPath);
+		free(escapedPath);
 		strcat(xml, "</Key></Object>\n");
 		LOG(LOG_DBG, "[Delete] %s", batch[i]);
 	}
+
 	strcat(xml, "</Delete>\n");
 
 	errorResult[0]=0;
