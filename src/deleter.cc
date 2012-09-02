@@ -160,7 +160,6 @@ int Deleter::deleteBatch(char **batch, uint32_t batchCount, char *errorResult, u
 	for (uint32_t i=0;i<batchCount;i++) {
 		char *escapedPath=Deleter::xmlEscape(batch[i]);
 		strcat(xml, "\t<Object><Key>");
-		printf("Deleteing %s\n", escapedPath);
 		strcat(xml, escapedPath);
 		free(escapedPath);
 		strcat(xml, "</Key></Object>\n");
