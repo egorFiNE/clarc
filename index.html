@@ -54,13 +54,13 @@
 
 	<div style="float: left; width: 70%; min-width: 300px; max-width: 600px;"> 
 		<p>
-			<b>clarc</b> is a free *nix commandline utility that synchronizes local file system folder to <a href="http://aws.amazon.com/s3/">Amazon S3</a>. Only files that were changed/added since last <b>clarc</b> invocation are uploaded.
+			<b>clarc</b> is a free rsync-like command-line utility that synchronizes local file system folder to <a href="http://aws.amazon.com/s3/">Amazon S3</a>. Only files that were changed/added since last <b>clarc</b> invocation will be uploaded.
 		</p>
 
 
 		<p>
 			<b>clarc</b> keeps track of changes by storing file metadata in a small local database. 
-			It possible to quickly rebuild the database from Amazon S3.
+			It possible to rebuild the database from Amazon S3.
 		</p>
 	</div>
 	<div style="clear: both"></div>
@@ -98,7 +98,7 @@
 <h3>Local meta database</h3>
 
 <p>
-	<b>clarc</b> uses local sqlite database to store files metadata. On subsequent invocations with the same path <b>clarc</b> will compare actual filesystem state with the database previously stored and only upload changed files. Database is stored in the same source folder in file named <code>.clarc.sqlite3</code>.
+	<b>clarc</b> uses local sqlite database to store files metadata. On subsequent invocations with the same path <b>clarc</b> will compare actual filesystem state with the database previously stored and only upload changed files. Database is stored in the same source folder, in a file named <code>.clarc.sqlite3</code>.
 </p>
 
 
@@ -109,10 +109,10 @@
       --secretAccessKey sDFGsvSVsd5S47hbBFfGfa634CbAs0Q4V547bGGa  <span class="codeBackslash">\</span>
       <span class="paramSource">/home/egor/Music/</span>  <span class="paramDest">s3://music.egorfine.com</span></code></pre>
 
-<h3>Retransmit algorythm and consistency issues</h3>
+<h3>Retransmit algorithm and consistency issues</h3>
 
 <p>
-	<b>clarc</b> does it's best to upload the file even in case the upload fails. In case of recoverable HTTP/Network error <b>clarc</b> will retry up to <b>3</b> to retransmit a file increasingly sleeping between tries. <b>clarc</b> gives up only in case all three attempts fail. The connect timeout is <b>15 seconds</b>, transmission timeout is <b>10 seconds</b>.
+	<b>clarc</b> does it's best to upload the file even in case the upload fails. In case of recoverable HTTP/Network error <b>clarc</b> will retry up to <b>3</b> to retransmit a file increasingly sleeping between tries. <b>clarc</b> gives up only in case all three attempts fail. The connect timeout is <b>15 seconds</b>. Transmission timeout is <b>10 seconds</b>.
 </p>
 
 <p>
@@ -153,14 +153,14 @@
 	</dd>
 
 	<dt>--excludeFromFile <span class="argument">&lt;file name&gt;</span></dt>
-	<dd>The same as <code>--exclude</code> but will read a list of exclude patterns from file instead of the command-line argument. The patterns in file must be newline-separated.</dd>
+	<dd>The same as <code>--exclude</code> but will read a list of exclude patterns from file instead of the command-line argument. The patterns in the file must be newline-separated.</dd>
 </dl>
 
 <h3>Amazon S3 options</h3>
 
 <dl>
 	<dt>--rebuild</dt>
-	<dd>Prior to uploading download files list and meta information from Amazon S3 and rebuild local database from scratch.</dd>
+	<dd>Download files list and meta information from Amazon S3 and rebuild local database from scratch. This is done before uploading begins.</dd>
 
 	<dt>--delete</dt>
 	<dd>Delete files from S3 which have been deleted locally. This is performed after upload. This option cannot be specified with <code>--rebuildOnly</code>.</dd>
@@ -251,8 +251,8 @@
 
 	<dt>Okay, I understand this tool uploads files, but what about downloads?</dt>
 	<dd>
-		Downloads are yet to be implemented but please note: a) <b>clarc</b> stores files on Amazon S3 as-is. 
-		You can download them with any currently available downloader. b) <b>clarc</b> stores all file metadata, 
+		Downloads are yet to be implemented but please note: a) <b>clarc</b> stores files "as is" on Amazon S3.
+		You can download them with any currently available downloader. b) <b>clarc</b> is storing all file metadata, 
 		so in the future it will be able to download files and restore their state (uid, gid, permissions, etc).
 	</dd>
 
@@ -311,7 +311,7 @@
 <h3>Download from S3</h3>
 
 <p>
-	Only one direction is implemented now: uploads from local folder to S3. Surely the other way is also required: download of the remote files into local folder. While it is possible to use other tools to download files (plenty are available), none of them recovers the metadata (UID, GID, permissions, etc). <b>clarc</b> should be able to restore folder as it was. 
+	Only one direction is implemented now: uploads from the local folder to S3. Surely the other way is also required: download of the remote files into the local folder. While it is possible to use other tools to download files (plenty are available), none of them recovers the metadata (UID, GID, permissions, etc). <b>clarc</b> should be able to restore folder as it was. 
 </p>
 
 <p>
