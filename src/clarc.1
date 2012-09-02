@@ -8,10 +8,10 @@ clarc \- sync local files to Amazon S3 cloud storage
 .B clarc
 is a utility that synchronizes local file system folder to Amazon S3. Only files that were changed/added since last 
 .B clarc 
-invocation are uploaded.
+invocation will be uploaded.
 
 .B clarc 
-keeps track of changes by storing file metadata in a small local database. It possible to quickly rebuild the database from Amazon S3.
+keeps track of changes by storing file metadata in a small local database. It possible to rebuild the database from Amazon S3.
 
 .SH SOURCE
 \fISOURCE\fR is the path to folder that is being uploaded.
@@ -32,12 +32,12 @@ For example,
 Ignore certain files/folders according to the Regular Expression pattern. There could be more than a single --exclude argument.
 .TP
 \fB\-\-excludeFromFile <path>
-The same as --exclude but will read a list of exclude patterns from file instead of the command-line argument. The patterns in file must be newline-separated.
+The same as --exclude but will read a list of exclude patterns from file instead of the command-line argument. The patterns in the file must be newline-separated.
 .SH AMAZON S3 OPTIONS
 .PP
 .TP
 \fB\-\-rebuild\fR
-Prior to uploading download files list and meta information from Amazon S3 and rebuild local database from scratch.
+Download files list and meta information from Amazon S3 and rebuild local database from scratch. This is done before uploading begins.
 .TP
 \fB\-\-delete\fR
 Delete files from S3 which have been deleted locally. This is performed after upload. This option cannot be specified with --rebuildOnly. 

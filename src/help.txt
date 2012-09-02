@@ -1,7 +1,7 @@
 Usage: 
   clarc [OPTIONS] SOURCE DEST
 
-SOURCE is the absolute path to folder that is being uploaded.
+SOURCE is the absolute path to the folder that is being uploaded.
 DEST is the Amazon S3 destination in format:
 
   s3://BUCKET[.ENDPOINT]/[FOLDER]
