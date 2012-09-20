@@ -21,6 +21,7 @@ private:
 	uint32_t allocCount;
 	Threads *threads;
 	int failed;
+	time_t lastProgressUpdate;
 
 	static char *extractMd5FromEtag(char *etag);
 	uint32_t extractMtimeFromMicroCurl(MicroCurl *microCurl);

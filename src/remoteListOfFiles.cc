@@ -581,7 +581,11 @@ void RemoteListOfFiles::runOverThread(int threadNumber, int pos) {
 			double percent = (double) pos / (double) this->count;
 
 			if (this->showProgress) {
-				printf("\r[MetaUpdate] Updated %.1f%% (%u files out of %u)     \r", percent*100, (uint32_t) pos, this->count);
+				time_t timeDiff = time(NULL);
+				if ((timeDiff - this->lastProgressUpdate) >= 1) {
+					this->lastProgressUpdate = timeDiff;
+					printf("\r[MetaUpdate] Updated %.1f%% (%u files out of %u)     \r", percent*100, (uint32_t) pos, this->count);
+				}
 			}
 
 			/*
@@ -599,6 +603,8 @@ int RemoteListOfFiles::resolveMtimes() {
 	for (i=0;i<this->count;i++) {
 		(this->mtimes)[i]=0;
 	}
+
+	this->lastProgressUpdate = time(NULL);
 	
 	this->threads = new Threads(60); // POSIX guarantees 64.
 
