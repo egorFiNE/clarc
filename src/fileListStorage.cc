@@ -3,8 +3,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <math.h>
 #include "fileListStorage.h"
 #include "localFileList.h"
+extern "C" {
+#include "logger.h"
+}
 
 int FileListStorage::createTable() {
 	return sqlite3_exec(
@@ -153,15 +157,38 @@ int FileListStorage::truncate() {
 }
 
 int FileListStorage::storeRemoteListOfFiles(RemoteListOfFiles *remoteListOfFiles) {
+	if (remoteListOfFiles->count<=100) {
+		return this->storeRemoteListOfFilesChunk(remoteListOfFiles, 0, remoteListOfFiles->count);
+	}
+
+	uint32_t chunks = (uint32_t) floor(remoteListOfFiles->count/100);
+	if (chunks*100 < remoteListOfFiles->count) { 
+		chunks++;
+	}
+
+	LOG(LOG_DBG, "[FileListStorage] Will store %d chunks (count = %d)", chunks, remoteListOfFiles->count);
+
+	for (int i=0;i<chunks;i++) {
+		uint32_t max = (i+1)*100;
+		if (max>remoteListOfFiles->count) {
+			max = remoteListOfFiles->count;
+		}
+		if (this->storeRemoteListOfFilesChunk(remoteListOfFiles, i*100, max) == STORAGE_FAILED) {
+			return STORAGE_FAILED;
+		}
+	}
+
+	return STORAGE_SUCCESS;
+}
+
+int FileListStorage::storeRemoteListOfFilesChunk(RemoteListOfFiles *remoteListOfFiles, uint32_t from, uint32_t to) {
 	char *sErrMsg = 0;
 	sqlite3_stmt *stmt = NULL;
 	const char *tail = 0;
 
-	if (sqlite3_exec(this->sqlite, "BEGIN TRANSACTION", NULL, NULL, &sErrMsg) != SQLITE_OK) {
-		return STORAGE_FAILED;
-	}
+	LOG(LOG_DBG, "[FileListStorage] Storing from %d to %d (max %d)", from, to, remoteListOfFiles->count);
 
-	if (sqlite3_exec(this->sqlite, "DELETE FROM files", NULL, NULL, &sErrMsg) != SQLITE_OK) {
+	if (sqlite3_exec(this->sqlite, "BEGIN TRANSACTION", NULL, NULL, &sErrMsg) != SQLITE_OK) {
 		return STORAGE_FAILED;
 	}
 
@@ -169,7 +196,7 @@ int FileListStorage::storeRemoteListOfFiles(RemoteListOfFiles *remoteListOfFiles
 		return STORAGE_FAILED;
 	}
 
-	for (uint32_t i=0;i<remoteListOfFiles->count;i++) {
+	for (uint32_t i=from;i<to;i++) {
 		if (sqlite3_bind_text(stmt, 1, remoteListOfFiles->paths[i], -1, SQLITE_TRANSIENT) != SQLITE_OK) {
 			return STORAGE_FAILED;
 		}

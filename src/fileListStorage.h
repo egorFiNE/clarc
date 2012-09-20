@@ -17,7 +17,8 @@ private:
 	sqlite3 *sqlite;
 	int createTable();
 	int putDbVersion();
-	
+	int storeRemoteListOfFilesChunk(RemoteListOfFiles *remoteListOfFiles, uint32_t from, uint32_t to);
+
 public:
 	FileListStorage(char *path, char *errorResult);
 	~FileListStorage();

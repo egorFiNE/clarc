@@ -56,6 +56,11 @@ int rebuildDatabase(RemoteListOfFiles *remoteListOfFiles, AmazonCredentials *ama
 		return LIST_SUCCESS;
 	}
 
+	if (fileListStorage->truncate() == STORAGE_FAILED) {
+		LOG(LOG_FATAL, "[MetaUpdate] Failed to clear list of files");
+		return LIST_FAILED;		
+	}
+
 	if (fileListStorage->storeRemoteListOfFiles(remoteListOfFiles) == STORAGE_FAILED) {
 		LOG(LOG_FATAL, "[MetaUpdate] Failed to store list of files");
 		return LIST_FAILED;
