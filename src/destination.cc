@@ -68,12 +68,13 @@ void Destination::parse(char *destination) {
 	}
 
 	if (strchr(this->folder, '/')!=NULL) {
-		return; 
+		free(path);
+		return;
 	}
 
 	int i=0;
 	while (char *e=endPoints[i++]) {
-		int len = strlen(e);
+		size_t len = strlen(e);
 		char *r = strstr(path, e);
 		if (r!=NULL) {
 			if (*(r+len)==0) {
