@@ -600,7 +600,7 @@ int RemoteListOfFiles::resolveMtimes() {
 		(this->mtimes)[i]=0;
 	}
 	
-	this->threads = new Threads(50);
+	this->threads = new Threads(60); // POSIX guarantees 64.
 
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
