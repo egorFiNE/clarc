@@ -323,9 +323,9 @@ CURLcode MicroCurl::go() {
 	curl_easy_getinfo(this->curl, CURLINFO_RESPONSE_CODE, &this->httpStatusCode);
 
 	this->body = curlResponse.body;
-	this->bodySize = curlResponse.bodySize;
+	this->bodySize = (uint32_t) curlResponse.bodySize;
 
-	this->parseHeaders(curlResponse.headers, curlResponse.headersSize);
+	this->parseHeaders(curlResponse.headers, (uint32_t) curlResponse.headersSize);
 
 	// now we are dealing with a weird curl or amazon bug. Sometimes we get CURLE_SEND_ERROR, 
 	// but the request has been performed.

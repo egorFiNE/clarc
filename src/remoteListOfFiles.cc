@@ -278,7 +278,7 @@ int RemoteListOfFiles::performPutOnBucket(char *url, char *region, uint32_t *sta
 		asprintf(&createBucketData, "<CreateBucketConfiguration xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" \
 			"<LocationConstraint>%s</LocationConstraint></CreateBucketConfiguration>\n", region);
 		microCurl->postData = strdup(createBucketData);
-		microCurl->postSize = strlen(createBucketData);
+		microCurl->postSize = (uint32_t) strlen(createBucketData);
 	}
 
 	microCurl->url = strdup(postUrl);

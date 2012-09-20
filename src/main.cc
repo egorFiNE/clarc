@@ -75,7 +75,7 @@ char *buildDatabaseFilePath(char *databaseFilename, char *databasePath) {
 }
 
 void showVersion() {
-	printf("clarc version " VERSION " (c) 2012 Egor Egorov <me@egorfine.com>\nMIT License  |  http://egorfine.com/clarc/\n");
+	printf("clarc version xx (c) 2012 Egor Egorov <me@egorfine.com>\nMIT License  |  http://egorfine.com/clarc/\n");
 }
 
 void clearString(char *str) {

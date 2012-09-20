@@ -58,7 +58,7 @@ int Deleter::performPostOnBucket(char *xml, uint32_t *statusCode, char *errorRes
 	md5_state_t state;
 	md5_byte_t digest[16];
 	md5_init(&state);
-	md5_append(&state, (const md5_byte_t *)xml, strlen(xml));
+	md5_append(&state, (const md5_byte_t *)xml, (int) strlen(xml));
 	md5_finish(&state, digest);
 
 	char base64Md5[100];
@@ -71,7 +71,7 @@ int Deleter::performPostOnBucket(char *xml, uint32_t *statusCode, char *errorRes
 	free(postUrl);
 
 	microCurl->postData = strdup(xml);
-	microCurl->postSize = strlen(xml);
+	microCurl->postSize = (uint32_t) strlen(xml);
 
 	microCurl->addHeader("Expect", "");
 	microCurl->addHeader("Content-Type", "");

@@ -59,7 +59,7 @@ void Destination::parse(char *destination) {
 	if (slash!=NULL) {
 		*slash=0;
 		this->folder = strdup(slash+1);
-		int len = strlen(this->folder);
+		size_t len = strlen(this->folder);
 		if (len>0 && this->folder[len-1]=='/') {
 			this->folder[len-1]=0;
 		}
@@ -98,7 +98,7 @@ int Destination::isValid() {
 }
 
 char *Destination::absoluteString() {
-	int len = strlen(this->endPoint) + strlen(this->bucket) + 16;
+	size_t len = strlen(this->endPoint) + strlen(this->bucket) + 16;
 	if (folder) {
 		 len+=strlen(this->folder);
 	}

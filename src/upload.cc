@@ -193,7 +193,7 @@ CURLcode Uploader::uploadFile(
 
 	if (isSoftLink) {
 		microCurl->postData = strdup(softLinkData);
-		microCurl->postSize = strlen(softLinkData);
+		microCurl->postSize = (uint32_t) strlen(softLinkData);
 	} else { 
 		microCurl->fileIn = fin;
 		microCurl->fileSize = fileInfo->st_size;
@@ -403,7 +403,7 @@ char *Uploader::calculateFileMd5(char *localPath) {
 	char *buffer = (char *)malloc(1024*1024);
 	size_t bytesRead;
 	while ((bytesRead=fread(buffer, 1, 1024*1024, fin))) {
-		md5_append(&state, (const md5_byte_t *)buffer, bytesRead);
+		md5_append(&state, (const md5_byte_t *)buffer, (int) bytesRead);
 	}
 	fclose(fin);
 	free(buffer);
@@ -648,7 +648,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, LocalFileList *files
 			free(realLocalPath);
 			continue;
 		} else { 
-			this->logDebugMtime(path, mtime, fileInfo->st_mtime);
+			this->logDebugMtime(path, (uint32_t) mtime, (uint32_t) fileInfo->st_mtime);
 		}
 
 		int threadNumber = threads->sleepTillThreadFree();
