@@ -298,7 +298,7 @@ int RemoteListOfFiles::performPutOnBucket(char *url, char *region, uint32_t *sta
 		}
 		delete microCurl;
 		strcpy(errorResult, "Error in auth module");
-		return HEAD_FAILED;
+		return CREATE_FAILED;
 	}
 
 	CURLcode res = microCurl->go();
@@ -435,7 +435,35 @@ int RemoteListOfFiles::downloadList() {
 	return LIST_SUCCESS;
 }
 
-int RemoteListOfFiles::performHeadOnFile(
+CURLcode RemoteListOfFiles::performHeadOnFileWithRetry(
+	char *url, 
+	char *remotePath, 
+	uint32_t *remoteMtime, 
+	uint32_t *statusCode, 
+	char *errorResult
+) {
+	int cUploads=0;
+
+	do {
+		CURLcode result = this->performHeadOnFile(url, remotePath, remoteMtime, statusCode, errorResult);
+		if (result==CURLE_OK) {
+			return result;
+		}
+
+		if (HTTP_SHOULD_RETRY_ON(result)) {
+			LOG(LOG_WARN, "[MetaUpdate] HEAD %s failed (%s), retrying soon", remotePath, curl_easy_strerror(result));
+			int sleepTime = cUploads*RETRY_SLEEP_TIME; 
+			sleep(sleepTime);
+		} else { 
+			return result;
+		}
+		cUploads++;
+	} while (cUploads<RETRY_FAIL_AFTER); 
+
+	return UPLOAD_FILE_FUNCTION_FAILED;
+}
+
+CURLcode RemoteListOfFiles::performHeadOnFile(
 	char *url, 
 	char *remotePath, 
 	uint32_t *remoteMtime, 
@@ -471,7 +499,7 @@ int RemoteListOfFiles::performHeadOnFile(
 	if (microCurl->prepare()==NULL) {
 		delete microCurl;
 		strcpy(errorResult, "Error in auth module");
-		return HEAD_FAILED;
+		return UPLOAD_FILE_FUNCTION_FAILED;
 	}
 	
 	CURLcode res = microCurl->go();
@@ -488,13 +516,13 @@ int RemoteListOfFiles::performHeadOnFile(
 		*remoteMtime = RemoteListOfFiles::extractMtimeFromMicroCurl(microCurl);
 
 		delete microCurl;
-		return HEAD_SUCCESS;
+		return CURLE_OK;
 
 	} else { 
 		strcpy(errorResult, "Error performing request");
 
 		delete microCurl;
-		return HEAD_FAILED;
+		return res;
 	}
 }
 
@@ -523,14 +551,14 @@ void RemoteListOfFiles::runOverThread(int threadNumber, int pos) {
 		errorResult[0]=0;
 		uint32_t mtime=0, statusCode=0;
 
-		int res = this->performHeadOnFile(url, this->paths[pos], &mtime, &statusCode, errorResult);
+		int res = this->performHeadOnFileWithRetry(url, this->paths[pos], &mtime, &statusCode, errorResult);
 
 		if (url!=NULL) {
 			free(url);
 			url=NULL;
 		}
 
-		if (res==HEAD_FAILED) {
+		if (res!=CURLE_OK) {
 			LOG(LOG_FATAL, "[MetaUpdate] FAIL %s: %s", this->paths[pos], errorResult);
 			this->failed=1;
 			this->threads->markFree(threadNumber);
@@ -556,8 +584,10 @@ void RemoteListOfFiles::runOverThread(int threadNumber, int pos) {
 				printf("\r[MetaUpdate] Updated %.1f%% (%u files out of %u)     \r", percent*100, (uint32_t) pos, this->count);
 			}
 
+			/*
 			LOG(LOG_INFO, "[MetaUpdate] updated %s (%d)                                             ", 
 				this->paths[pos], this->mtimes[pos]);
+			*/
 			this->threads->markFree(threadNumber);
 			return;
 		}

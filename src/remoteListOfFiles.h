@@ -27,7 +27,8 @@ private:
 
 	int parseListOfFiles(char *body, uint64_t bodySize, uint8_t *isTruncated, char *lastKey, char *errorResult);
 	int performGetOnBucket(char *url, char *marker, int setLocationHeader, char *body, uint64_t *bodySize, uint32_t *statusCode, char *errorResult);
-	int performHeadOnFile(char *url, char *remotePath, uint32_t *remoteMtime, uint32_t *statusCode, char *errorResult);
+	CURLcode performHeadOnFileWithRetry(char *url, char *remotePath, uint32_t *remoteMtime, uint32_t *statusCode, char *errorResult);
+	CURLcode performHeadOnFile(char *url, char *remotePath, uint32_t *remoteMtime, uint32_t *statusCode, char *errorResult);
 	int performPutOnBucket(char *url, char *region, uint32_t *statusCode, char *errorResult);
 
 public:
@@ -55,9 +56,6 @@ public:
 
 #define LIST_FAILED 0
 #define LIST_SUCCESS 1
-
-#define HEAD_FAILED 0
-#define HEAD_SUCCESS 1
 
 #define CREATE_FAILED 0
 #define CREATE_SUCCESS 1
