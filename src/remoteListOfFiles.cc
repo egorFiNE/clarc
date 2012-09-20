@@ -585,6 +585,7 @@ void RemoteListOfFiles::runOverThread(int threadNumber, int pos) {
 				if ((timeDiff - this->lastProgressUpdate) >= 1) {
 					this->lastProgressUpdate = timeDiff;
 					printf("\r[MetaUpdate] Updated %.1f%% (%u files out of %u)     \r", percent*100, (uint32_t) pos, this->count);
+					fflush(stdout);
 				}
 			}
 
