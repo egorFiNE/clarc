@@ -22,6 +22,11 @@ extern "C" {
 
 #include "microCurl.h"
 
+	struct ReadFunctionData {
+		char *userData;
+		char *currentPtr;
+	};
+
 MicroCurl::MicroCurl(AmazonCredentials *amazonCredentials) {
 	this->amazonCredentials = amazonCredentials;
 
@@ -172,8 +177,12 @@ char *MicroCurl::getHeader(char *name) {
 }
 
 size_t readFunctionForMicroCurl(void *ptr, size_t size, size_t nmemb, void *userdata)  {
-	strcpy((char *)ptr, (char*) userdata);
-	return strlen((char*)userdata);
+	size_t totalBytes = size*nmemb;
+	struct ReadFunctionData *readFunctionData = (struct ReadFunctionData *)userdata;
+	strncpy((char *)ptr, (char*) readFunctionData->currentPtr, totalBytes);
+	size_t l = strlen((char*)ptr);
+	readFunctionData->currentPtr+=l;
+	return l;
 }
 
 struct CurlResponse {
@@ -276,6 +285,9 @@ CURLcode MicroCurl::go() {
 	curl_easy_setopt(this->curl, CURLOPT_WRITEHEADER, (void *)&curlResponse); 
 	curl_easy_setopt(this->curl, CURLOPT_HEADERFUNCTION, &curlResponseHeadersCallback);
 
+	struct ReadFunctionData readFunctionData;
+	readFunctionData.userData = NULL;
+
 	if (this->method==METHOD_HEAD) {
 		curl_easy_setopt(this->curl, CURLOPT_NOBODY, 1);
 
@@ -287,18 +299,25 @@ CURLcode MicroCurl::go() {
 		} else if (this->postSize==0) {
 			curl_easy_setopt(this->curl, CURLOPT_INFILESIZE, 0);
 		} else { 
-			curl_easy_setopt(this->curl, CURLOPT_READDATA, this->postData);
+			readFunctionData.userData  = this->postData;
+			readFunctionData.currentPtr = this->postData;
+		
+			curl_easy_setopt(this->curl, CURLOPT_READDATA, &readFunctionData);
 			curl_easy_setopt(this->curl, CURLOPT_READFUNCTION, &readFunctionForMicroCurl);
 			curl_easy_setopt(this->curl, CURLOPT_INFILESIZE, this->postSize);
 		}
 
 	} else if (this->method==METHOD_POST) {
+
 		curl_easy_setopt(this->curl, CURLOPT_POST, 1L);
 		curl_easy_setopt(this->curl, CURLOPT_POSTFIELDS, NULL);
 
-		curl_easy_setopt(this->curl, CURLOPT_READDATA, this->postData);
-		curl_easy_setopt(this->curl, CURLOPT_POSTFIELDSIZE, this->postSize);
+		readFunctionData.userData  = this->postData;
+		readFunctionData.currentPtr = this->postData;
+		
+		curl_easy_setopt(this->curl, CURLOPT_READDATA, &readFunctionData);
 		curl_easy_setopt(this->curl, CURLOPT_READFUNCTION, &readFunctionForMicroCurl);
+		curl_easy_setopt(this->curl, CURLOPT_POSTFIELDSIZE, this->postSize);
 	}
 
 	struct curl_slist *slist = NULL;
