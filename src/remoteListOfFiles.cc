@@ -212,7 +212,7 @@ int RemoteListOfFiles::performGetOnBucket(
 	}
 
 	microCurl->url = strdup(postUrl);
-	LOG(LOG_DBG, "[File list] GET %s", postUrl);
+	LOG(LOG_DBG, "[List] GET %s", postUrl);
 	free(postUrl);
 
 

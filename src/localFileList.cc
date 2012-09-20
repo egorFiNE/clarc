@@ -37,7 +37,7 @@ LocalFileList::~LocalFileList() {
 
 void LocalFileList::add(char *path, uint64_t size) {
 	if (this->excludeFilePattern && this->excludeFilePattern->matches(path)) {
-		LOG(LOG_DBG, "[File List] Excluded %s", path);
+		LOG(LOG_DBG, "[List] Excluded %s", path);
 		return;
 	}
 
@@ -77,7 +77,7 @@ void LocalFileList::recurseIn(char *path, char *prefix) {
 
 			struct stat fileInfo;
 			if (lstat(statName, &fileInfo)<0) {
-				LOG(LOG_WARN, "[File List] WARNING: cannot stat file: %s", statName);
+				LOG(LOG_WARN, "[List] WARNING: cannot stat file: %s", statName);
 			} else {
 				this->add(fullName, (uint64_t) fileInfo.st_size);
 			}
