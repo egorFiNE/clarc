@@ -13,6 +13,7 @@ using namespace std;
 #include <errno.h>
 #include <sqlite3.h>
 #include <time.h>	
+#include <unistd.h>
 
 extern "C" {
 #include "utils.h"
