@@ -10,6 +10,7 @@ using namespace std;
 #include <curl/curl.h>
 #include <errno.h>
 #include <math.h>
+#include <unistd.h>
 
 extern "C" {
 #include "utils.h"
@@ -190,6 +191,7 @@ int RemoteListOfFiles::performGetOnBucket(
 	asprintf(&canonicalizedResource, "/%s/%s", amazonCredentials->bucket, setLocationHeader ? "?location" : "");
 	microCurl->canonicalizedResource = canonicalizedResource; // will be free()d by MicroCurl
 
+
 	char *postUrl;
 	if (url) {
 		postUrl = strdup(url);
@@ -199,9 +201,14 @@ int RemoteListOfFiles::performGetOnBucket(
 
 	if (marker && strlen(marker) > 0) {
 		if (strstr(postUrl, marker)==NULL) {
-			postUrl = (char*) realloc(postUrl, strlen(postUrl) + strlen(marker) + 16);
+CURL *s = curl_easy_init();
+
+			char *escapedMarker = curl_easy_escape(s, marker, strlen(marker));
+			postUrl = (char*) realloc(postUrl, strlen(postUrl) + strlen(escapedMarker) + 16);
 			strcat(postUrl, "?marker=");
-			strcat(postUrl, marker);
+			strcat(postUrl, escapedMarker);
+			free(escapedMarker);
+curl_easy_cleanup(s);
 		}
 
 	} else if (setLocationHeader) {
