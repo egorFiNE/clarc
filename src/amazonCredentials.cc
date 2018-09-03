@@ -27,18 +27,25 @@ AmazonCredentials::~AmazonCredentials() {
 	this->endPoint=NULL;
 }
 
-int AmazonCredentials::isValidRegionForBucketCreate(char *region) {
-	return (
-		strcmp(region, "") == 0 || 
-		strcmp(region, "US") == 0 || 
-		strcmp(region, "EU") == 0 || 
-		strcmp(region, "eu-west-1") == 0 || 
-		strcmp(region, "us-west-1") == 0 || 
-		strcmp(region, "us-west-2") == 0 || 
-		strcmp(region, "ap-southeast-1") == 0 || 
-		strcmp(region, "ap-northeast-1") == 0 || 
-		strcmp(region, "sa-east-1") == 0
-	);
+bool AmazonCredentials::isValidRegionForBucketCreate(std::string region) {
+	return
+		(region == "us-east-2") ||
+		(region == "us-east-1") ||
+		(region == "us-west-2") ||
+		(region == "us-west-1") ||
+		(region == "ca-central-1") ||
+		(region == "ap-south-1") ||
+		(region == "ap-northeast-2") ||
+		(region == "ap-northeast-3") ||
+		(region == "ap-southeast-1") ||
+		(region == "ap-southeast-2") ||
+		(region == "ap-northeast-1") ||
+		(region == "cn-north-1") ||
+		(region == "eu-central-1") ||
+		(region == "eu-west-1") ||
+		(region == "eu-west-2") ||
+		(region == "eu-west-3") ||
+		(region == "sa-east-1");
 }
 
 char *AmazonCredentials::generateUrlForObjectDelete(int useSsl) {
