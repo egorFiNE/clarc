@@ -17,7 +17,7 @@ using namespace std;
 
 class MicroCurl
 {
-private: 
+private:
 	CURL *curl;
 	char *headerContentType;
 	char *headerContentMd5;
@@ -37,6 +37,7 @@ private:
 public:
 	int debug;
 	int method;
+	int insecureSsl;
 	char *url;
 	char *canonicalizedResource;
 	int connectTimeout;

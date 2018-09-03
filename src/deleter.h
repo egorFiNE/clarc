@@ -27,6 +27,7 @@ private:
 public:
 	int dryRun;
 	int useSsl;
+	int insecureSsl;
 	int connectTimeout;
 	int networkTimeout;
 

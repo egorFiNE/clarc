@@ -29,7 +29,7 @@ extern "C" {
 static char *accessKeyId=NULL, *secretAccessKey=NULL,
 	*databasePath=NULL, *databaseFilename= (char *)".clarc.sqlite3",
 	*source = NULL, *autoCreateBucketRegion = NULL;
-static int performRebuild=0, performUpload=1, performDelete=0, makeAllPublic=0, useRrs=0, showProgress=0, skipSsl=0, dryRun=0,
+static int performRebuild=0, performUpload=1, performDelete=0, makeAllPublic=0, useRrs=0, showProgress=0, skipSsl=0, insecureSsl=0, dryRun=0,
 	connectTimeout = 0, networkTimeout = 0, uploadThreads = 0, autoCreateBucket = 0;
 
 FilePattern *excludeFilePattern;
@@ -40,14 +40,14 @@ int logLevel = LOG_ERR;
 
 int rebuildDatabase(RemoteListOfFiles *remoteListOfFiles, AmazonCredentials *amazonCredentials, FileListStorage *fileListStorage) {
 	int res = remoteListOfFiles->downloadList();
-	if (res==LIST_FAILED) { 
+	if (res==LIST_FAILED) {
 		return LIST_FAILED;
 	}
 
 	LOG(LOG_INFO, "[MetaUpdate] Got %d files, updating meta information", remoteListOfFiles->count);
 
 	res = remoteListOfFiles->resolveMtimes();
-	if (res==LIST_FAILED) { 
+	if (res==LIST_FAILED) {
 		return LIST_FAILED;
 	}
 
@@ -58,13 +58,13 @@ int rebuildDatabase(RemoteListOfFiles *remoteListOfFiles, AmazonCredentials *ama
 
 	if (fileListStorage->truncate() == STORAGE_FAILED) {
 		LOG(LOG_FATAL, "[MetaUpdate] Failed to clear list of files");
-		return LIST_FAILED;		
+		return LIST_FAILED;
 	}
 
 	if (fileListStorage->storeRemoteListOfFiles(remoteListOfFiles) == STORAGE_FAILED) {
 		LOG(LOG_FATAL, "[MetaUpdate] Failed to store list of files");
 		return LIST_FAILED;
-	} else { 
+	} else {
 		return LIST_SUCCESS;
 	}
 }
@@ -98,7 +98,7 @@ int parseCommandline(int argc, char *argv[]) {
 	if (argc==1) {
 		showVersion();
 		printf("Perhaps, ask --help?\n");
-		exit(0);	
+		exit(0);
 	}
 
 	static struct option longOpts[] = {
@@ -108,6 +108,7 @@ int parseCommandline(int argc, char *argv[]) {
 		{ "rrs",               no_argument,        NULL,  0 },
 		{ "rss",               no_argument,        NULL,  0 }, // common typo
 		{ "skipSsl",           no_argument,        NULL,  0 },
+		{ "insecureSsl",       no_argument,        NULL,  0 },
 		{ "create",            required_argument,  NULL,  0 },
 
 		{ "connectTimeout",    required_argument,  NULL,  0 },
@@ -195,6 +196,9 @@ int parseCommandline(int argc, char *argv[]) {
 		} else if (strcmp(longName, "skipSsl")==0) {
 			skipSsl = 1;
 
+		} else if (strcmp(longName, "insecureSsl")==0) {
+			insecureSsl = 1;
+
 		} else if (strcmp(longName, "delete")==0) {
 			performDelete = 1;
 
@@ -277,10 +281,10 @@ int parseCommandline(int argc, char *argv[]) {
 		if (candidate!=NULL) {
 			accessKeyId=strdup(candidate);
 		}
-	} 
+	}
 
 	if (!accessKeyId) {
-		printf("Specify --accessKeyId argument or S3_ACCESSKEYID environment variable\n"); 
+		printf("Specify --accessKeyId argument or S3_ACCESSKEYID environment variable\n");
 		failed = 1;
 	}
 
@@ -289,10 +293,10 @@ int parseCommandline(int argc, char *argv[]) {
 		if (candidate!=NULL) {
 			secretAccessKey=strdup(candidate);
 		}
-	} 
+	}
 
 	if (!secretAccessKey) {
-		printf("Specify --secretAccessKey argument or S3_SECRETACCESSKEY environment variable\n"); 
+		printf("Specify --secretAccessKey argument or S3_SECRETACCESSKEY environment variable\n");
 		failed = 1;
 	}
 
@@ -311,7 +315,7 @@ int parseCommandline(int argc, char *argv[]) {
 
 	if (!databasePath) {
 		databasePath = source;
-	} else { 
+	} else {
 		while (databasePath[strlen(databasePath)-1]=='/') {
 			databasePath[strlen(databasePath)-1]=0;
 		}
@@ -356,7 +360,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	AmazonCredentials *amazonCredentials = new AmazonCredentials(
-		accessKeyId, 
+		accessKeyId,
 		secretAccessKey,
 		destination->bucket, destination->endPoint
 	);
@@ -373,6 +377,9 @@ int main(int argc, char *argv[]) {
 	if (skipSsl) {
 		remoteListOfFiles->useSsl=0;
 	}
+	if (insecureSsl) {
+		remoteListOfFiles->insecureSsl=1;
+	}
 	if (networkTimeout) {
 		remoteListOfFiles->networkTimeout = networkTimeout;
 	}
@@ -382,24 +389,24 @@ int main(int argc, char *argv[]) {
 
 	if (dryRun) {
 		LOG(LOG_INFO, "[Auth] [dry] Success");
-	} else { 
+	} else {
 		res = remoteListOfFiles->checkAuth();
 		if (res == AUTH_FAILED_BUCKET_DOESNT_EXISTS) {
-			if (autoCreateBucket) { 
+			if (autoCreateBucket) {
 				res = remoteListOfFiles->createBucket(autoCreateBucketRegion);
 				if (res==CREATE_SUCCESS) {
 					LOG(LOG_INFO, "[BucketCreate] Created bucket %s in region %s", amazonCredentials->bucket, autoCreateBucketRegion);
-				} else { 
+				} else {
 					exit(1);
 				}
-			} else { 
+			} else {
 				LOG(LOG_FATAL, "[Auth] Failed: bucket doesn't exists and no --create supplied");
-				exit(1);		
+				exit(1);
 			}
 
 		} else if (res == AUTH_FAILED) {
 			LOG(LOG_FATAL, "[Auth] FAIL, exit");
-			exit(1);		
+			exit(1);
 		}
 		LOG(LOG_INFO, "[Auth] Success");
 	}
@@ -433,6 +440,9 @@ int main(int argc, char *argv[]) {
 		if (skipSsl) {
 			uploader->useSsl=0;
 		}
+		if (insecureSsl) {
+			uploader->insecureSsl=1;
+		}
 		if (networkTimeout) {
 			uploader->networkTimeout = networkTimeout;
 		}
@@ -452,11 +462,14 @@ int main(int argc, char *argv[]) {
 		if (res==UPLOAD_SUCCESS) {
 			if (performDelete) {
 				LocalFileList *filesToDelete = fileListStorage->calculateListOfFilesToDelete(localFileList);
-				
+
 				Deleter *deleter = new Deleter(amazonCredentials, filesToDelete, fileListStorage, databaseFilename);
 				deleter->dryRun = dryRun;
 				if (skipSsl) {
 					deleter->useSsl=0;
+				}
+				if (insecureSsl) {
+					deleter->insecureSsl=1;
 				}
 				if (networkTimeout) {
 					deleter->networkTimeout = networkTimeout;

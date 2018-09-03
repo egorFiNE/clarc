@@ -35,6 +35,7 @@ RemoteListOfFiles::RemoteListOfFiles(AmazonCredentials *amazonCredentials) {
 
 	this->showProgress=0;
 	this->useSsl=1;
+	this->insecureSsl=0;
 	this->connectTimeout = CONNECT_TIMEOUT;
 	this->networkTimeout = LOW_SPEED_TIME;
 }
@@ -67,7 +68,7 @@ char *RemoteListOfFiles::extractMd5FromEtag(char *etag) {
 	}
 
 	if (strlen(etag)<3) {
-		// can etag be one char?... 
+		// can etag be one char?...
 		return NULL;
 	}
 
@@ -79,7 +80,7 @@ char *RemoteListOfFiles::extractMd5FromEtag(char *etag) {
 }
 
 
-void RemoteListOfFiles::add(char *path, char *md5) { 
+void RemoteListOfFiles::add(char *path, char *md5) {
 	this->paths[this->count] = strdup(path);
 	this->md5s[this->count] = strdup(md5);
 
@@ -94,10 +95,10 @@ void RemoteListOfFiles::add(char *path, char *md5) {
 }
 
 int RemoteListOfFiles::parseListOfFiles(
-	char *body, 
-	uint64_t bodySize, 
-	uint8_t *isTruncated, 
-	char *lastKey, 
+	char *body,
+	uint64_t bodySize,
+	uint8_t *isTruncated,
+	char *lastKey,
 	char *errorResult
 ) {
 	*errorResult=0;
@@ -176,12 +177,12 @@ int RemoteListOfFiles::parseListOfFiles(
 }
 
 int RemoteListOfFiles::performGetOnBucket(
-	char *url, 
-	char *marker, 
-	int setLocationHeader, 
-	char *body, 
-	uint64_t *bodySize, 
-	uint32_t *statusCode, 
+	char *url,
+	char *marker,
+	int setLocationHeader,
+	char *body,
+	uint64_t *bodySize,
+	uint32_t *statusCode,
 	char *errorResult
 ) {
 	MicroCurl *microCurl = new MicroCurl(amazonCredentials);
@@ -190,7 +191,6 @@ int RemoteListOfFiles::performGetOnBucket(
 	char *canonicalizedResource;
 	asprintf(&canonicalizedResource, "/%s/%s", amazonCredentials->bucket, setLocationHeader ? "?location" : "");
 	microCurl->canonicalizedResource = canonicalizedResource; // will be free()d by MicroCurl
-
 
 	char *postUrl;
 	if (url) {
@@ -201,14 +201,13 @@ int RemoteListOfFiles::performGetOnBucket(
 
 	if (marker && strlen(marker) > 0) {
 		if (strstr(postUrl, marker)==NULL) {
-CURL *s = curl_easy_init();
-
+			CURL *s = curl_easy_init();
 			char *escapedMarker = curl_easy_escape(s, marker, strlen(marker));
 			postUrl = (char*) realloc(postUrl, strlen(postUrl) + strlen(escapedMarker) + 16);
 			strcat(postUrl, "?marker=");
 			strcat(postUrl, escapedMarker);
 			free(escapedMarker);
-curl_easy_cleanup(s);
+			curl_easy_cleanup(s);
 		}
 
 	} else if (setLocationHeader) {
@@ -222,11 +221,13 @@ curl_easy_cleanup(s);
 	LOG(LOG_DBG, "[List] GET %s", postUrl);
 	free(postUrl);
 
-
 	microCurl->networkTimeout = this->networkTimeout;
 	microCurl->connectTimeout = this->connectTimeout;
 	microCurl->maxConnects = MAXCONNECTS;
 	microCurl->lowSpeedLimit = LOW_SPEED_LIMIT;
+	if (this->insecureSsl) {
+		microCurl->insecureSsl = 1;
+	}
 
 	if (microCurl->prepare()==NULL) {
 		strcpy(errorResult, "Error in auth module");
@@ -244,7 +245,7 @@ curl_easy_cleanup(s);
 			strcpy(errorResult, location);
 			free(location);
 			*bodySize=0;
-		} else { 
+		} else {
 			memcpy(body, microCurl->body, microCurl->bodySize);
 			*bodySize = microCurl->bodySize;
 		}
@@ -252,7 +253,8 @@ curl_easy_cleanup(s);
 		delete microCurl;
 		return LIST_SUCCESS;
 
-	} else { 
+	} else {
+		printf("%d\n", microCurl->httpStatusCode);
 		strcpy(errorResult, "Error performing request");
 
 		delete microCurl;
@@ -281,7 +283,7 @@ int RemoteListOfFiles::performPutOnBucket(char *url, char *region, uint32_t *sta
 	if (strcmp(region, "")==0 || strcmp(region, "US")==0) {
 		microCurl->postData = NULL;
 		microCurl->postSize = 0;
-	} else { 
+	} else {
 		asprintf(&createBucketData, "<CreateBucketConfiguration xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" \
 			"<LocationConstraint>%s</LocationConstraint></CreateBucketConfiguration>\n", region);
 		microCurl->postData = strdup(createBucketData);
@@ -327,7 +329,7 @@ int RemoteListOfFiles::performPutOnBucket(char *url, char *region, uint32_t *sta
 
 		return CREATE_SUCCESS;
 
-	} else { 
+	} else {
 		strcpy(errorResult, "Error performing request");
 		delete microCurl;
 		return CREATE_FAILED;
@@ -354,7 +356,7 @@ int RemoteListOfFiles::createBucket(char *region) {
 		}
 
 		if (statusCode==307) {
-			url = strdup(errorResult); 
+			url = strdup(errorResult);
 			LOG(LOG_INFO, "[BucketCreate] Retrying: Amazon asked to repeat to: %s", url);
 			continue;
 
@@ -380,7 +382,7 @@ int RemoteListOfFiles::downloadList() {
 
 		if (strlen(lastKey)>0) {
 			LOG(LOG_INFO, "[List] Getting 1000 files after %s", lastKey);
-		} else { 
+		} else {
 			LOG(LOG_INFO, "[List] Getting first 1000 files");
 		}
 
@@ -388,7 +390,7 @@ int RemoteListOfFiles::downloadList() {
 		body[0]=0;
 		uint64_t bodySize=0;
 
-		int res = this->performGetOnBucket(url, lastKey, 0, body, &bodySize, &statusCode, errorResult); 
+		int res = this->performGetOnBucket(url, lastKey, 0, body, &bodySize, &statusCode, errorResult);
 		if (url!=NULL) {
 			free(url);
 			url=NULL;
@@ -407,7 +409,7 @@ int RemoteListOfFiles::downloadList() {
 
 		} else if (statusCode==307) {
 			LOG(LOG_INFO, "[List] Retrying: Amazon asked to repeat to: %s", errorResult);
-			url = strdup(errorResult); 
+			url = strdup(errorResult);
 			free(body);
 			continue;
 		}
@@ -422,7 +424,7 @@ int RemoteListOfFiles::downloadList() {
 			body,
 			bodySize,
 			&isTruncated,
-			lastKey, 
+			lastKey,
 			errorResult
 		);
 
@@ -443,10 +445,10 @@ int RemoteListOfFiles::downloadList() {
 }
 
 CURLcode RemoteListOfFiles::performHeadOnFileWithRetry(
-	char *url, 
-	char *remotePath, 
-	uint32_t *remoteMtime, 
-	uint32_t *statusCode, 
+	char *url,
+	char *remotePath,
+	uint32_t *remoteMtime,
+	uint32_t *statusCode,
 	char *errorResult
 ) {
 	int cUploads=0;
@@ -459,29 +461,29 @@ CURLcode RemoteListOfFiles::performHeadOnFileWithRetry(
 
 		if (HTTP_SHOULD_RETRY_ON(result)) {
 			LOG(LOG_WARN, "[MetaUpdate] HEAD %s failed (%s), retrying soon", remotePath, curl_easy_strerror(result));
-			int sleepTime = cUploads*RETRY_SLEEP_TIME; 
+			int sleepTime = cUploads*RETRY_SLEEP_TIME;
 			sleep(sleepTime);
-		} else { 
+		} else {
 			return result;
 		}
 		cUploads++;
-	} while (cUploads<RETRY_FAIL_AFTER); 
+	} while (cUploads<RETRY_FAIL_AFTER);
 
 	return UPLOAD_FILE_FUNCTION_FAILED;
 }
 
 CURLcode RemoteListOfFiles::performHeadOnFile(
-	char *url, 
-	char *remotePath, 
-	uint32_t *remoteMtime, 
-	uint32_t *statusCode, 
+	char *url,
+	char *remotePath,
+	uint32_t *remoteMtime,
+	uint32_t *statusCode,
 	char *errorResult
 ) {
 	MicroCurl *microCurl = new MicroCurl(this->amazonCredentials);
 	microCurl->method=METHOD_HEAD;
 
 	char *escapedRemotePath=microCurl->escapePath(remotePath);
-	
+
 	char *canonicalizedResource;
 	asprintf(&canonicalizedResource, "/%s/%s", amazonCredentials->bucket, escapedRemotePath);
 	microCurl->canonicalizedResource = canonicalizedResource; // will be freed in microcurl
@@ -490,7 +492,7 @@ CURLcode RemoteListOfFiles::performHeadOnFile(
 	if (url) {
 		headUrl = strdup(url);
 	} else {
-		headUrl = amazonCredentials->generateUrl(escapedRemotePath, this->useSsl); 
+		headUrl = amazonCredentials->generateUrl(escapedRemotePath, this->useSsl);
 	}
 
 	free(escapedRemotePath);
@@ -508,7 +510,7 @@ CURLcode RemoteListOfFiles::performHeadOnFile(
 		strcpy(errorResult, "Error in auth module");
 		return UPLOAD_FILE_FUNCTION_FAILED;
 	}
-	
+
 	CURLcode res = microCurl->go();
 
 	*statusCode = microCurl->httpStatusCode;
@@ -525,7 +527,7 @@ CURLcode RemoteListOfFiles::performHeadOnFile(
 		delete microCurl;
 		return CURLE_OK;
 
-	} else { 
+	} else {
 		strcpy(errorResult, "Error performing request");
 
 		delete microCurl;
@@ -542,7 +544,7 @@ struct ThreadCommand {
 void *remoteListOfFiles_runOverThreadFunc(void *arg) {
 	struct ThreadCommand *threadCommand = (struct ThreadCommand *)arg;
 	threadCommand->self->runOverThread(threadCommand->threadNumber, threadCommand->pos);
-	free(arg); 
+	free(arg);
 	pthread_exit(NULL);
 }
 
@@ -573,7 +575,7 @@ void RemoteListOfFiles::runOverThread(int threadNumber, int pos) {
 		}
 
 		if (statusCode==307) {
-			url = strdup(errorResult); 
+			url = strdup(errorResult);
 			LOG(LOG_INFO, "[MetaUpdate] Retrying: Amazon asked to repeat to: %s", url);
 			continue;
 
@@ -597,7 +599,7 @@ void RemoteListOfFiles::runOverThread(int threadNumber, int pos) {
 			}
 
 			/*
-			LOG(LOG_INFO, "[MetaUpdate] updated %s (%d)                                             ", 
+			LOG(LOG_INFO, "[MetaUpdate] updated %s (%d)                                             ",
 				this->paths[pos], this->mtimes[pos]);
 			*/
 			this->threads->markFree(threadNumber);
@@ -613,7 +615,7 @@ int RemoteListOfFiles::resolveMtimes() {
 	}
 
 	this->lastProgressUpdate = time(NULL);
-	
+
 	this->threads = new Threads(60); // POSIX guarantees 64.
 
 	pthread_attr_t attr;
@@ -624,7 +626,7 @@ int RemoteListOfFiles::resolveMtimes() {
 	for (i=0;i<this->count; i++) {
 		int threadNumber = threads->sleepTillThreadFree();
 		threads->markBusy(threadNumber);
-		
+
 		struct ThreadCommand *threadCommand = (struct ThreadCommand *) malloc(sizeof(struct ThreadCommand));
 		threadCommand->threadNumber = threadNumber;
 		threadCommand->pos = i;
@@ -651,7 +653,7 @@ int RemoteListOfFiles::resolveMtimes() {
 	if (!this->failed) {
 		LOG(LOG_INFO, "[MetaUpdate] All %d files updated", i);
 	}
-	
+
 	return this->failed ? LIST_FAILED : LIST_SUCCESS;
 }
 
@@ -663,7 +665,7 @@ int RemoteListOfFiles::checkAuth() {
 	body[0]=0;
 
 	uint64_t bodySize=0;
-	int res = this->performGetOnBucket(NULL, NULL, 1, body, &bodySize, &statusCode, errorResult); 
+	int res = this->performGetOnBucket(NULL, NULL, 1, body, &bodySize, &statusCode, errorResult);
 	free(body);
 
 	if (res == LIST_FAILED) {

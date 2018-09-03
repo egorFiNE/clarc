@@ -35,7 +35,7 @@ private:
 public:
 	RemoteListOfFiles(AmazonCredentials *amazonCredentials);
 	~RemoteListOfFiles();
-	
+
 	void add(char *path, char *md5);
 	int downloadList();
 	int resolveMtimes();
@@ -51,6 +51,7 @@ public:
 	uint32_t count;
 	int showProgress;
 	int useSsl;
+	int insecureSsl;
 	int connectTimeout;
 	int networkTimeout;
 };

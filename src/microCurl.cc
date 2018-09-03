@@ -12,7 +12,7 @@ using namespace std;
 #include <curl/curl.h>
 #include <errno.h>
 #include <sqlite3.h>
-#include <time.h>	
+#include <time.h>
 
 extern "C" {
 #include "utils.h"
@@ -30,8 +30,6 @@ extern "C" {
 MicroCurl::MicroCurl(AmazonCredentials *amazonCredentials) {
 	this->amazonCredentials = amazonCredentials;
 
-	this->debug=0;
-
 	this->method=0;
 	this->url = NULL;
 
@@ -39,12 +37,12 @@ MicroCurl::MicroCurl(AmazonCredentials *amazonCredentials) {
 	this->networkTimeout=-1;
 	this->maxConnects=-1;
 	this->lowSpeedLimit=-1;
+	this->insecureSsl=0;
 
 	this->canonicalizedResource = NULL;
 	this->postData = NULL;
 	this->postSize = 0;
 	this->fileIn = NULL;
-
 
 	this->bodySize=0;
 	this->httpStatusCode=0;
@@ -168,7 +166,7 @@ char *MicroCurl::getHeader(char *name) {
 	for(std::vector<int>::size_type i = 0; i != this->resultingHeaderNamesList.size(); i++) {
 		if (strcmp(name, this->resultingHeaderNamesList[i].c_str())==0) {
 			const char *candidate = this->resultingHeaderValuesList[i].c_str();
-			if (candidate != NULL) { 
+			if (candidate != NULL) {
 				return strdup(candidate);
 			}
 		}
@@ -223,7 +221,6 @@ size_t curlResponseBodyCallback(void *contents, size_t size, size_t nmemb, struc
 	return realsize;
 }
 
-
 CURL *MicroCurl::prepare() {
 	this->reset();
 	this->curl = curl_easy_init();
@@ -234,7 +231,7 @@ CURL *MicroCurl::prepare() {
 
 	char *stringToSign = this->getStringToSign();
 
-	char *authorization = this->amazonCredentials->sign(stringToSign); 
+	char *authorization = this->amazonCredentials->sign(stringToSign);
 	free(stringToSign);
 	if (authorization==NULL) {
 		return NULL;
@@ -245,7 +242,6 @@ CURL *MicroCurl::prepare() {
 
 	return this->curl;
 }
-
 
 CURLcode MicroCurl::go() {
 	struct CurlResponse curlResponse;
@@ -261,8 +257,12 @@ CURLcode MicroCurl::go() {
 	if (this->debug) {
 		curl_easy_setopt(this->curl, CURLOPT_VERBOSE, 1);
 	}
-	
+
 	curl_easy_setopt(this->curl, CURLOPT_URL, this->url);
+
+	if (this->insecureSsl) {
+		curl_easy_setopt(this->curl, CURLOPT_SSL_VERIFYHOST, 0);
+	}
 
 	curl_easy_setopt(this->curl, CURLOPT_NOSIGNAL, 1);
 
@@ -282,7 +282,7 @@ CURLcode MicroCurl::go() {
 	curl_easy_setopt(this->curl, CURLOPT_WRITEDATA, (void *)&curlResponse);
 	curl_easy_setopt(this->curl, CURLOPT_WRITEFUNCTION, curlResponseBodyCallback);
 
-	curl_easy_setopt(this->curl, CURLOPT_WRITEHEADER, (void *)&curlResponse); 
+	curl_easy_setopt(this->curl, CURLOPT_WRITEHEADER, (void *)&curlResponse);
 	curl_easy_setopt(this->curl, CURLOPT_HEADERFUNCTION, &curlResponseHeadersCallback);
 
 	struct ReadFunctionData readFunctionData;
@@ -298,10 +298,10 @@ CURLcode MicroCurl::go() {
 			curl_easy_setopt(this->curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t) this->fileSize);
 		} else if (this->postSize==0) {
 			curl_easy_setopt(this->curl, CURLOPT_INFILESIZE, 0);
-		} else { 
+		} else {
 			readFunctionData.userData  = this->postData;
 			readFunctionData.currentPtr = this->postData;
-		
+
 			curl_easy_setopt(this->curl, CURLOPT_READDATA, &readFunctionData);
 			curl_easy_setopt(this->curl, CURLOPT_READFUNCTION, &readFunctionForMicroCurl);
 			curl_easy_setopt(this->curl, CURLOPT_INFILESIZE, this->postSize);
@@ -314,7 +314,7 @@ CURLcode MicroCurl::go() {
 
 		readFunctionData.userData  = this->postData;
 		readFunctionData.currentPtr = this->postData;
-		
+
 		curl_easy_setopt(this->curl, CURLOPT_READDATA, &readFunctionData);
 		curl_easy_setopt(this->curl, CURLOPT_READFUNCTION, &readFunctionForMicroCurl);
 		curl_easy_setopt(this->curl, CURLOPT_POSTFIELDSIZE, this->postSize);
@@ -333,7 +333,7 @@ CURLcode MicroCurl::go() {
 
 	this->curlErrors = (char *) malloc(CURL_ERROR_SIZE);
 	this->curlErrors[0]=0;
-	curl_easy_setopt(this->curl, CURLOPT_ERRORBUFFER, this->curlErrors); 
+	curl_easy_setopt(this->curl, CURLOPT_ERRORBUFFER, this->curlErrors);
 
 	CURLcode res = curl_easy_perform(this->curl);
 
@@ -346,7 +346,7 @@ CURLcode MicroCurl::go() {
 
 	this->parseHeaders(curlResponse.headers, (uint32_t) curlResponse.headersSize);
 
-	// now we are dealing with a weird curl or amazon bug. Sometimes we get CURLE_SEND_ERROR, 
+	// now we are dealing with a weird curl or amazon bug. Sometimes we get CURLE_SEND_ERROR,
 	// but the request has been performed.
 	if (strlen(curlResponse.headers)>1) {
 		if (strstr(curlResponse.headers, "HTTP/1.1 200 OK")==curlResponse.headers) {
@@ -397,7 +397,7 @@ const char *MicroCurl::getMethodName() {
 			return "HEAD";
 		case METHOD_PUT:
 			return "PUT";
-		default: 
+		default:
 			return "GET";
 	}
 }
@@ -406,7 +406,7 @@ char *MicroCurl::getStringToSign() {
 	char *amzHeaders = this->serializeAmzHeadersIntoStringToSign();
 
 	char *stringToSign;
-	asprintf(&stringToSign, 
+	asprintf(&stringToSign,
 		"%s\n"  // HTTP-Verb + "\n" +
 		"%s\n"  // Content-MD5 + "\n" +
 		"%s\n"	// Content-Type + "\n" +
@@ -414,7 +414,7 @@ char *MicroCurl::getStringToSign() {
 		"%s"    // CanonicalizedAmzHeaders +
 		"%s",   // CanonicalizedResource
 
-		
+
 		this->getMethodName(), // HTTP-Verb + "\n" +
 		this->headerContentMd5 == NULL ? "" : this->headerContentMd5, // Content-MD5 + "\n" +
 		this->headerContentType == NULL ? "" : this->headerContentType, // Content-Type + "\n" +
@@ -429,4 +429,3 @@ char *MicroCurl::getStringToSign() {
 
 	return stringToSign;
 }
-

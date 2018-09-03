@@ -24,9 +24,9 @@ extern "C" {
 #include "settings.h"
 
 Deleter::Deleter(
-	AmazonCredentials *amazonCredentials, 
-	LocalFileList *filesToDelete, 
-	FileListStorage *fileListStorage, 
+	AmazonCredentials *amazonCredentials,
+	LocalFileList *filesToDelete,
+	FileListStorage *fileListStorage,
 	char *databaseFilename
 ) {
 	this->amazonCredentials = amazonCredentials;
@@ -35,6 +35,7 @@ Deleter::Deleter(
 	this->databaseFilename = databaseFilename;
 	this->dryRun=0;
 	this->useSsl=1;
+	this->insecureSsl=0;
 	this->connectTimeout = CONNECT_TIMEOUT;
 	this->networkTimeout = LOW_SPEED_TIME;
 }
@@ -80,24 +81,27 @@ int Deleter::performPostOnBucket(char *xml, uint32_t *statusCode, char *errorRes
 	microCurl->maxConnects = MAXCONNECTS;
 	microCurl->networkTimeout = this->networkTimeout;
 	microCurl->lowSpeedLimit = LOW_SPEED_LIMIT;
+	if (this->insecureSsl) {
+		microCurl->insecureSsl = 1;
+	}
 
 	if (microCurl->prepare()==NULL) {
 		strcpy(errorResult, "Error in auth module");
 		delete microCurl;
 		return 0;
 	}
-	
+
 	CURLcode res = microCurl->go();
 
 	*statusCode = microCurl->httpStatusCode;
 
-	// now we are dealing with a weird curl or amazon bug. Sometimes we get CURLE_SEND_ERROR, 
+	// now we are dealing with a weird curl or amazon bug. Sometimes we get CURLE_SEND_ERROR,
 	// but the request has been performed.
 	if (res==CURLE_OK || microCurl->httpStatusCode==200) {
 		delete microCurl;
 		return 1;
 
-	} else { 
+	} else {
 		strcpy(errorResult, "Error performing request");
 		delete microCurl;
 		return 0;
@@ -126,7 +130,7 @@ char *Deleter::xmlEscape(char *src) {
 			newString[pos++]='m';
 			newString[pos++]='p';
 			newString[pos++]=';';
-		} else { 
+		} else {
 			newString[pos++]=*p;
 		}
 		p++;
@@ -175,7 +179,7 @@ int Deleter::deleteBatch(char **batch, uint32_t batchCount, char *errorResult, u
 	if (this->dryRun) {
 		*statusCode=200;
 		res=1;
-	} else { 
+	} else {
 		res=this->performPostOnBucket(xml, statusCode, errorResult);
 	}
 

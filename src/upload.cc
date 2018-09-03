@@ -12,7 +12,7 @@ using namespace std;
 #include <curl/curl.h>
 #include <errno.h>
 #include <sqlite3.h>
-#include <time.h>	
+#include <time.h>
 #include <unistd.h>
 
 extern "C" {
@@ -24,7 +24,7 @@ extern "C" {
 #include "md5.h"
 
 // this is declared explicitly instead of including unistd.h because some
-// linux distributions have clang broken with it. Fortunately, sleep() is 
+// linux distributions have clang broken with it. Fortunately, sleep() is
 // the same on all sane OS.
 unsigned int sleep(unsigned int seconds);
 }
@@ -54,7 +54,7 @@ int progressFunction(struct UploadProgress *uploadProgress, double dltotal, doub
 
 void Uploader::progress(char *path, double uploadedBytes, double ulnow, double ultotal) {
 	this->uploadedSize+=(uint64_t) uploadedBytes;
-	if (this->showProgress) { 
+	if (this->showProgress) {
 		time_t timeDiff = time(NULL) - this->lastProgressUpdate;
 		if (timeDiff>=1) {
 			double percent = (double)this->uploadedSize / (double)this->totalSize;
@@ -77,6 +77,7 @@ Uploader::Uploader(AmazonCredentials *amazonCredentials) {
 	this->useRrs = 0;
 	this->makeAllPublic = 0;
 	this->useSsl = 1;
+	this->insecureSsl = 0;
 	this->dryRun = 0;
 	this->connectTimeout = CONNECT_TIMEOUT;
 	this->networkTimeout = LOW_SPEED_TIME;
@@ -84,7 +85,7 @@ Uploader::Uploader(AmazonCredentials *amazonCredentials) {
 	this->failed=0;
 	this->showProgress=0;
 	this->threads = NULL;
-	this->destinationFolder = NULL;	
+	this->destinationFolder = NULL;
 
 	pthread_mutex_init(&uidMutex, NULL);
 }
@@ -98,7 +99,7 @@ Uploader::~Uploader() {
 void Uploader::extractMD5FromETagHeaders(char *md5HeaderValue, char *md5) {
 	*md5=0;
 	if (md5HeaderValue==NULL || strlen(md5HeaderValue)!=34) {
-		return; 
+		return;
 	}
 
 	if (*md5HeaderValue==0x22 && *(md5HeaderValue+33)==0x22) { // double quotes
@@ -123,16 +124,16 @@ void Uploader::addUidAndGidHeaders(uid_t uid, gid_t gid, MicroCurl *microCurl) {
 	microCurl->addHeader("x-amz-meta-gid", gidHeader);
 
 	free(gidHeader);
-	free(uidHeader);	
+	free(uidHeader);
 }
 
 CURLcode Uploader::uploadFile(
-	char *localPath, 
-	char *remotePath, 
+	char *localPath,
+	char *remotePath,
 	char *url,
-	char *contentType, 
-	struct stat *fileInfo, 	
-	uint32_t *httpStatusCode, 
+	char *contentType,
+	struct stat *fileInfo,
+	uint32_t *httpStatusCode,
 	char *md5,
 	char *errorResult
 ) {
@@ -166,14 +167,14 @@ CURLcode Uploader::uploadFile(
 	if (isSoftLink) {
 		softLinkData = (char *) malloc(1024);
 		ssize_t linkLength = readlink(localPath, softLinkData, 1024);
-		if (softLinkData < 0) {
+		if (linkLength < 0) {
 			softLinkData = (char *) realloc(softLinkData, 1024*100);
 			linkLength = readlink(localPath, softLinkData, 1024*100); // eat this
 		}
 		softLinkData[linkLength]=0;
 		microCurl->addHeader((char *) "x-amz-meta-symlink", softLinkData);
 		microCurl->addHeader((char *) "x-amz-meta-localpath", localPath);
-	} 
+	}
 
 	char *escapedRemotePath = microCurl->escapePath(remotePath);
 
@@ -184,8 +185,8 @@ CURLcode Uploader::uploadFile(
 	char *postUrl;
 	if (url) {
 		postUrl = strdup(url);
-	} else { 
-		postUrl = amazonCredentials->generateUrl(escapedRemotePath, this->useSsl); 
+	} else {
+		postUrl = amazonCredentials->generateUrl(escapedRemotePath, this->useSsl);
 	}
 	free(escapedRemotePath);
 
@@ -195,7 +196,7 @@ CURLcode Uploader::uploadFile(
 	if (isSoftLink) {
 		microCurl->postData = strdup(softLinkData);
 		microCurl->postSize = (uint32_t) strlen(softLinkData);
-	} else { 
+	} else {
 		microCurl->fileIn = fin;
 		microCurl->fileSize = fileInfo->st_size;
 	}
@@ -207,6 +208,9 @@ CURLcode Uploader::uploadFile(
 	microCurl->maxConnects = MAXCONNECTS;
 	microCurl->networkTimeout = this->networkTimeout;
 	microCurl->lowSpeedLimit = LOW_SPEED_LIMIT;
+	if (this->insecureSsl) {
+		microCurl->insecureSsl=1;
+	}
 
 	struct UploadProgress *uploadProgress = (struct UploadProgress *)malloc(sizeof(struct UploadProgress));
 	uploadProgress->path = remotePath;
@@ -229,8 +233,8 @@ CURLcode Uploader::uploadFile(
 
 	if (isSoftLink) {
 		free(softLinkData);
-	} else { 
-		fclose(fin); 
+	} else {
+		fclose(fin);
 	}
 
 	free(uploadProgress);
@@ -246,16 +250,16 @@ CURLcode Uploader::uploadFile(
 			strcpy(errorResult, location);
 			free(location);
 
-		} else if (microCurl->httpStatusCode==200) { 
+		} else if (microCurl->httpStatusCode==200) {
 			char *etag = microCurl->getHeader("etag");
-			Uploader::extractMD5FromETagHeaders(etag, md5); 
+			Uploader::extractMD5FromETagHeaders(etag, md5);
 			free(etag);
 		}
 
 		delete microCurl;
 		return CURLE_OK;
 
-	} else { 
+	} else {
 		strcpy(errorResult, microCurl->curlErrors);
 
 		delete microCurl;
@@ -264,11 +268,11 @@ CURLcode Uploader::uploadFile(
 }
 
 int Uploader::uploadFileWithRetry(
-	char *localPath, 
-	char *remotePath, 
-	char *contentType, 
+	char *localPath,
+	char *remotePath,
+	char *contentType,
 	struct stat *fileInfo,
-	uint32_t *httpStatusCode, 
+	uint32_t *httpStatusCode,
 	char *md5,
 	char *errorResult
 ) {
@@ -280,14 +284,14 @@ int Uploader::uploadFileWithRetry(
 		LOG(LOG_DBG, "[Upload] Uploading %s -> %s", localPath, remotePath);
 
 		CURLcode res=this->uploadFile(localPath, remotePath, url, contentType, fileInfo, httpStatusCode, md5, errorResult);
-		
+
 		if (url!=NULL) {
 			free(url);
 			url=NULL;
 		}
 
 		if (*httpStatusCode==307) {
-			url = strdup(errorResult); 
+			url = strdup(errorResult);
 			cUploads=0;
 			LOG(LOG_INFO, "[Upload] Retrying %s: Amazon asked to reupload to: %s", remotePath, errorResult);
 			continue;
@@ -299,22 +303,22 @@ int Uploader::uploadFileWithRetry(
 
 		if (HTTP_SHOULD_RETRY_ON(res)) {
 			LOG(LOG_WARN, "[Upload] %s failed (%s), retrying soon", remotePath, curl_easy_strerror(res));
-			int sleepTime = cUploads*RETRY_SLEEP_TIME; 
+			int sleepTime = cUploads*RETRY_SLEEP_TIME;
 			sleep(sleepTime);
-		} else { 
+		} else {
 			return UPLOAD_FAILED;
 		}
 		cUploads++;
-	} while (cUploads<RETRY_FAIL_AFTER); 
+	} while (cUploads<RETRY_FAIL_AFTER);
 
 	return UPLOAD_FAILED;
 }
 
 int Uploader::uploadFileWithRetryAndStore(
-	FileListStorage *fileListStorage, 
-	char *localPath, 
-	char *remotePath, 
-	char *contentType, 
+	FileListStorage *fileListStorage,
+	char *localPath,
+	char *remotePath,
+	char *contentType,
 	struct stat *fileInfo,
 	char *errorResult
 ) {
@@ -339,14 +343,14 @@ int Uploader::uploadFileWithRetryAndStore(
 				sprintf(errorResult, "Oops, database error");
 				toReturn = UPLOAD_FAILED;
 			}
-		} else { 
+		} else {
 			sprintf(errorResult, "Amazon did not return MD5");
 			toReturn = UPLOAD_FAILED;
 		}
-		
+
 		free(remoteMd5);
 		return toReturn;
-		
+
 	} else {
 		sprintf(errorResult, "Amazon returned HTTP status %d", httpStatus);
 		free(remoteMd5);
@@ -370,13 +374,13 @@ void *uploader_runOverThreadFunc(void *arg) {
 	struct ThreadCommand *threadCommand = (struct ThreadCommand *)arg;
 
 	threadCommand->self->runOverThread(
-		threadCommand->threadNumber, 
+		threadCommand->threadNumber,
 		threadCommand->fileListStorage,
 		threadCommand->realLocalPath,
 		threadCommand->path,
 		threadCommand->contentType,
 		threadCommand->fileInfo,
-		threadCommand->storedMd5, 
+		threadCommand->storedMd5,
 		threadCommand->shouldCheckMd5
 	);
 
@@ -386,7 +390,7 @@ void *uploader_runOverThreadFunc(void *arg) {
 	free(threadCommand->fileInfo);
 	free(threadCommand->storedMd5);
 
-	free(arg); 
+	free(arg);
 
 	pthread_exit(NULL);
 }
@@ -412,8 +416,8 @@ char *Uploader::calculateFileMd5(char *localPath) {
 	md5_finish(&state, digest);
 
 	char *md5_1;
-	asprintf(&md5_1, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", 
-		digest[0], digest[1], digest[2], digest[3], digest[4], digest[5], digest[6], digest[7], digest[8], digest[9], 
+	asprintf(&md5_1, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+		digest[0], digest[1], digest[2], digest[3], digest[4], digest[5], digest[6], digest[7], digest[8], digest[9],
 		digest[10], digest[11], digest[12], digest[13], digest[14], digest[15]
 	);
 
@@ -422,9 +426,9 @@ char *Uploader::calculateFileMd5(char *localPath) {
 
 int Uploader::updateMeta(
 	FileListStorage *fileListStorage,
-	char *realLocalPath, 
-	char *remotePath, 
-	char *contentType, 
+	char *realLocalPath,
+	char *remotePath,
+	char *contentType,
 	struct stat *fileInfo,
 	char *errorResult
 ) {
@@ -448,12 +452,12 @@ int Uploader::updateMeta(
 	microCurl->addHeader((char*) "x-amz-copy-source", canonicalizedResource);
 
 	microCurl->addHeader("x-amz-metadata-directive", "REPLACE");
-	microCurl->addHeader("Expect", "");	
+	microCurl->addHeader("Expect", "");
 	microCurl->addHeader("Content-type", contentType);
 
 	Uploader::addUidAndGidHeaders(fileInfo->st_uid, fileInfo->st_gid, microCurl);
 
-	microCurl->url = amazonCredentials->generateUrl(escapedRemotePath, this->useSsl); 
+	microCurl->url = amazonCredentials->generateUrl(escapedRemotePath, this->useSsl);
 	free(escapedRemotePath);
 
 	microCurl->networkTimeout = this->networkTimeout;
@@ -477,7 +481,7 @@ int Uploader::updateMeta(
 		delete microCurl;
 		return LIST_SUCCESS;
 
-	} else { 
+	} else {
 		strcpy(errorResult, "Error performing request");
 
 		delete microCurl;
@@ -488,11 +492,11 @@ int Uploader::updateMeta(
 }
 
 void Uploader::runOverThread(
-	uint8_t threadNumber, 
+	uint8_t threadNumber,
 	FileListStorage *fileListStorage,
-	char *realLocalPath, 
-	char *path, 
-	char *contentType, 
+	char *realLocalPath,
+	char *path,
+	char *contentType,
 	struct stat *fileInfo,
 	char *storedMd5,
 	int shouldCheckMd5
@@ -520,7 +524,7 @@ void Uploader::runOverThread(
 				} else {
 					LOG(LOG_FATAL, "[Upload] FAIL meta update %s: %s                  ", path, errorResult);
 					this->failed=1;
-				} 
+				}
 			}
 			return;
 		}
@@ -532,7 +536,7 @@ void Uploader::runOverThread(
 	}
 
 	res = this->uploadFileWithRetryAndStore(
-		fileListStorage, realLocalPath, path, contentType, 
+		fileListStorage, realLocalPath, path, contentType,
 		fileInfo, errorResult
 	);
 
@@ -541,7 +545,7 @@ void Uploader::runOverThread(
 		this->failed=1;
 	} else {
 		LOG(LOG_INFO, "[Upload] Uploaded %s              ", path);
-	}	
+	}
 }
 
 char *Uploader::createRealLocalPath(char *prefix, char *path) {
@@ -557,7 +561,7 @@ char *Uploader::createRealLocalPath(char *prefix, char *path) {
 void Uploader::logDebugMtime(char *path, uint32_t mtimeDb, uint32_t mtimeFs) {
 	if (mtimeDb==0) {
 		LOG(LOG_DBG, "[Upload] %s: no stored mtime", path);
-	} else { 
+	} else {
 		struct tm *timeinfo;
 		time_t m;
 		m = (time_t) mtimeDb;
@@ -571,7 +575,7 @@ void Uploader::logDebugMtime(char *path, uint32_t mtimeDb, uint32_t mtimeFs) {
 		char *mtimeFsHr = (char *)malloc(128);
 		mtimeFsHr[0]=0;
 		strftime(mtimeFsHr, 128, "%F %T", timeinfo);
-		LOG(LOG_DBG, "[Upload] %s: stored mtime=%d (%s), filesystem mtime=%d (%s)", 
+		LOG(LOG_DBG, "[Upload] %s: stored mtime=%d (%s), filesystem mtime=%d (%s)",
 			path,
 			mtimeDb, mtimeDbHr, mtimeFs, mtimeFsHr
 		);
@@ -601,14 +605,14 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, LocalFileList *files
 		char *path = (files->paths[i]+1);
 
 		char *remotePath;
-		if (this->destinationFolder!=NULL && strlen(this->destinationFolder)>0) { 
+		if (this->destinationFolder!=NULL && strlen(this->destinationFolder)>0) {
 			asprintf(&remotePath, "%s/%s", destinationFolder, path);
-		} else { 
+		} else {
 			remotePath = strdup(path); // not really elegant, I know
 		}
 
 		char *realLocalPath = Uploader::createRealLocalPath(prefix, path);
-		
+
 		struct stat *fileInfo = (struct stat *) malloc(sizeof(struct stat));
 
 		if (lstat(realLocalPath, fileInfo)<0) {
@@ -618,9 +622,9 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, LocalFileList *files
 			this->uploadedSize+=files->sizes[i];
 			continue;
 		}
-				
+
 		if (fileInfo->st_size>=MAX_S3_FILE_SIZE) {
-			LOG(LOG_WARN, "[Upload] WARNING %s: File too large (%" PRIu64 " bytes while only %" PRIu64 " allowed), skipped", 
+			LOG(LOG_WARN, "[Upload] WARNING %s: File too large (%" PRIu64 " bytes while only %" PRIu64 " allowed), skipped",
 				path, (uint64_t) fileInfo->st_size, (uint64_t) MAX_S3_FILE_SIZE);
 			free(realLocalPath);
 			free(remotePath);
@@ -628,7 +632,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, LocalFileList *files
 			this->uploadedSize+=files->sizes[i];
 			continue;
 		}
-	
+
 		char *md5 = (char *) malloc(33);
 		uint64_t mtime=0;
 		int res = fileListStorage->lookup(remotePath, md5, &mtime);
@@ -648,7 +652,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, LocalFileList *files
 			free(remotePath);
 			free(realLocalPath);
 			continue;
-		} else { 
+		} else {
 			this->logDebugMtime(path, (uint32_t) mtime, (uint32_t) fileInfo->st_mtime);
 		}
 
@@ -659,13 +663,13 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, LocalFileList *files
 		threadCommand->threadNumber = threadNumber;
 		threadCommand->self = this;
 
-		threadCommand->fileInfo = fileInfo; 
+		threadCommand->fileInfo = fileInfo;
 		threadCommand->contentType = guessContentType(path);
 		threadCommand->path = remotePath;
 		threadCommand->realLocalPath = realLocalPath;
 		threadCommand->fileListStorage = fileListStorage;
-		threadCommand->storedMd5 = md5; // free()ed in runOverThread 
-		threadCommand->shouldCheckMd5 =  mtime > 0 ? 1 : 0; 
+		threadCommand->storedMd5 = md5; // free()ed in runOverThread
+		threadCommand->shouldCheckMd5 =  mtime > 0 ? 1 : 0;
 
 		pthread_t threadId;
 		int rc = pthread_create(&threadId, &attr, uploader_runOverThreadFunc, (void *)threadCommand);
@@ -686,7 +690,7 @@ int Uploader::uploadFiles(FileListStorage *fileListStorage, LocalFileList *files
 	return this->failed ? UPLOAD_FAILED : UPLOAD_SUCCESS;
 }
 
-int Uploader::uploadDatabase(char *databasePath, char *databaseFilename) { 
+int Uploader::uploadDatabase(char *databasePath, char *databaseFilename) {
 	struct stat fileInfo;
 	if (stat(databasePath, &fileInfo)<0) {
 		LOG(LOG_FATAL, "[Upload] Oops database upload failed: file %s doesn't exists", databaseFilename);
@@ -694,7 +698,7 @@ int Uploader::uploadDatabase(char *databasePath, char *databaseFilename) {
 	}
 
 	this->showProgress = 0;
-	
+
 	char md5[33] = "";
 	uint32_t httpStatusCode=0;
 
@@ -702,7 +706,7 @@ int Uploader::uploadDatabase(char *databasePath, char *databaseFilename) {
 
 	if (this->destinationFolder!=NULL) {
 		asprintf(&remoteDatabasePath, "%s/%s", this->destinationFolder, databaseFilename);
-	} else { 
+	} else {
 		remoteDatabasePath = strdup(databaseFilename);
 	}
 
@@ -716,7 +720,7 @@ int Uploader::uploadDatabase(char *databasePath, char *databaseFilename) {
 	} if (res==UPLOAD_SUCCESS && httpStatusCode==200) {
 		LOG(LOG_INFO, "[Upload] Database uploaded");
 
-	} else { 
+	} else {
 		LOG(LOG_ERR, "[Upload] Database upload failed: %s", errorResult);
 	}
 

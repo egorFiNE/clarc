@@ -15,44 +15,44 @@ using namespace std;
 
 class Uploader
 {
-private: 
+private:
 	AmazonCredentials *amazonCredentials;
 	time_t lastProgressUpdate;
 	int failed;
 
 	int uploadFileWithRetry(
-		char *localPath, 
-		char *remotePath, 
-		char *contentType, 
+		char *localPath,
+		char *remotePath,
+		char *contentType,
 		struct stat *fileInfo,
-		uint32_t *httpStatusCode, 
+		uint32_t *httpStatusCode,
 		char *md5,
 		char *errorResult
 	);
 	CURLcode uploadFile(
-		char *localPath, 
-		char *remotePath, 
+		char *localPath,
+		char *remotePath,
 		char *url,
-		char *contentType, 
+		char *contentType,
 		struct stat *fileInfo,
-		uint32_t *httpStatusCode, 
+		uint32_t *httpStatusCode,
 		char *md5,
 		char *errorResult
 	);
 	int uploadFileWithRetryAndStore(
-		FileListStorage *fileListStorage, 
-		char *localPath, 
-		char *remotePath, 
-		char *contentType, 
+		FileListStorage *fileListStorage,
+		char *localPath,
+		char *remotePath,
+		char *contentType,
 		struct stat *fileInfo,
 		char *errorResult
 	);
 
 	int updateMeta(
 		FileListStorage *fileListStorage,
-		char *realLocalPath, 
-		char *path, 
-		char *contentType, 
+		char *realLocalPath,
+		char *path,
+		char *contentType,
 		struct stat *fileInfo,
 		char *errorResult
 	);
@@ -74,6 +74,7 @@ public:
 	int useRrs;
 	int makeAllPublic;
 	int useSsl;
+	int insecureSsl;
 	int dryRun;
 	int connectTimeout;
 	int networkTimeout;
@@ -84,11 +85,11 @@ public:
 	int uploadFiles(FileListStorage *fileListStorage, LocalFileList *files, char *prefix);
 	int uploadDatabase(char *databasePath, char *databaseFilename);
 	void runOverThread(
-		uint8_t threadNumber, 
-		FileListStorage *fileListStorage, 
-		char *realLocalPath, 
-		char *path, 
-		char *contentType, 
+		uint8_t threadNumber,
+		FileListStorage *fileListStorage,
+		char *realLocalPath,
+		char *path,
+		char *contentType,
 		struct stat *fileInfo,
 		char *storedMd5,
 		int shouldCheckMd5
