@@ -32,6 +32,7 @@ MicroCurl::MicroCurl(AmazonCredentials *amazonCredentials) {
 
 	this->method=0;
 	this->url = NULL;
+	this->debug=0;
 
 	this->connectTimeout=-1;
 	this->networkTimeout=-1;
