@@ -1,5 +1,8 @@
-clarc
-=====
+# Abandoned
+
+This project has been abandoned and deprecated. Please use [rclone](https://rclone.org/) instead.
+
+# clarc
 
 clarc is a free rsync-line command-line utility that synchronizes local file system folder to Amazon S3. Only files that were changed/added since last clarc invocation will be uploaded.
 
